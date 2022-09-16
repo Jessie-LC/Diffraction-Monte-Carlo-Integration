@@ -12,6 +12,7 @@
 const int wavelengthCount = 50;
 
 struct DiffractionSettings {
+	bool squareScale;
 	int size;
 
 	float quality;

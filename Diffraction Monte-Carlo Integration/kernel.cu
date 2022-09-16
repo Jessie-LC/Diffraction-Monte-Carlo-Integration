@@ -492,9 +492,10 @@ float Plancks(float t, float lambda) {
     return p1 / p2;
 }
 
-int ComputeDiffractionImage(int size, float quality, float radius, float scale, float dist) {
+int ComputeDiffractionImage(bool squareScale, int size, float quality, float radius, float scale, float dist) {
     DiffractionSettings settings;
 
+    settings.squareScale = squareScale;
     settings.size = size;
     settings.quality = quality;
     settings.radius = radius;
@@ -579,8 +580,8 @@ int ComputeDiffractionImage(int size, float quality, float radius, float scale, 
 }
 
 extern "C" {
-    __declspec(dllexport) int ComputeDiffractionImageExport(int size, float quality, float radius, float scale, float dist) {
-        return ComputeDiffractionImage(size, quality, radius, scale, dist);
+    __declspec(dllexport) int ComputeDiffractionImageExport(bool squareScale, int size, float quality, float radius, float scale, float dist) {
+        return ComputeDiffractionImage(squareScale, size, quality, radius, scale, dist);
     }
 }
 
