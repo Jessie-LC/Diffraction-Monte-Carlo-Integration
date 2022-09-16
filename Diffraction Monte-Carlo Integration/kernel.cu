@@ -578,6 +578,12 @@ int ComputeDiffractionImage(int size, float quality, float radius, float scale, 
     return 0;
 }
 
+extern "C" {
+    __declspec(dllexport) int ComputeDiffractionImageExport(int size, float quality, float radius, float scale, float dist) {
+        return ComputeDiffractionImage(size, quality, radius, scale, dist);
+    }
+}
+
 int main() {
     return ComputeDiffractionImage(1024, 1.0f, 2.0f, 10.0f, 10.0f);
 }
