@@ -1,0 +1,1 @@
+int ComputeDiffractionImage(int size, float quality, float radius, float scale, float dist);

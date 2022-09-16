@@ -9,9 +9,15 @@
 
 #include "glm/glm.hpp"
 
-#include "Spectra.cuh"
-
-const int SIZE = 512;
 const int wavelengthCount = 50;
 
-__global__ void DiffractionIntegral(thrust::complex<float>* diff, int wavelength);
+struct DiffractionSettings {
+	int size;
+
+	float quality;
+	float radius;
+	float scale;
+	float dist;
+};
+
+__global__ void DiffractionIntegral(thrust::complex<float>* diff, int wavelength, DiffractionSettings settings);
