@@ -1,5 +1,4 @@
 ﻿#include "Diffraction.cuh"
-#include "kernel.cuh"
 
 using namespace glm;
 
