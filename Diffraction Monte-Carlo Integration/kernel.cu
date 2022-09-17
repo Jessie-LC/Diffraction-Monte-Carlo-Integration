@@ -586,5 +586,5 @@ extern "C" {
 }
 
 int main() {
-    return ComputeDiffractionImage(1024, 1.0f, 2.0f, 10.0f, 10.0f);
+    return ComputeDiffractionImage(false, 1024, 1.0f, 2.0f, 10.0f, 10.0f);
 }

@@ -1,16 +1,85 @@
-﻿<Window x:Class="Diffraction_Monte_Carlo_Integration.UI.Windows.MainWindow"
+﻿<mah:MetroWindow x:Class="Diffraction_Monte_Carlo_Integration.UI.Windows.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModels="clr-namespace:Diffraction_Monte_Carlo_Integration.UI.ViewModels"
+        xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+        xmlns:viewData="clr-namespace:Diffraction_Monte_Carlo_Integration.UI.ViewData"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <DockPanel>
-        <Border DockPanel.Dock="Bottom">
-            <Button HorizontalAlignment="Right"
-                    Click="Button_OnClick">
-                <TextBlock Text="Run"/>
-            </Button>
+        Title="Diffraction Monte-Carlo Integration" Width="420" Height="280" TitleCharacterCasing="Normal">
+    <Window.Resources>
+        <viewData:TextureSizeValues x:Key="TextureSizeValues"/>
+    </Window.Resources>
+    <Window.DataContext>
+        <viewModels:MainWindowViewModel x:Name="ViewModel"/>
+    </Window.DataContext>
+    <Grid>
+        <DockPanel>
+            <Border DockPanel.Dock="Bottom" Background="{StaticResource MahApps.Brushes.Highlight}">
+                <DockPanel LastChildFill="False">
+                    <Button DockPanel.Dock="Right" Margin="8,4" Click="Button_OnClick">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Margin="0,0,8,0" FontSize="14" Text="Build Image"/>
+                            <iconPacks:PackIconFontAwesome Kind="PlaySolid" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </DockPanel>
+            </Border>
+            <ScrollViewer>
+                <Grid Margin="8">
+                    <Grid.Resources>
+                        <Style TargetType="TextBlock" x:Key="LabelStyle">
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="FontSize" Value="14"/>
+                            <Setter Property="Margin" Value="8,0,8,0"/>
+                        </Style>
+                    </Grid.Resources>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <CheckBox Grid.Column="0" Grid.Row="0" HorizontalAlignment="Center"
+                              IsChecked="{Binding SquareScale, Mode=TwoWay}"/>
+                    <TextBlock Grid.Column="1" Grid.Row="0" Text="Square Scale"
+                               Style="{StaticResource LabelStyle}"/>
+                    <ComboBox Grid.Column="0" Grid.Row="1" HorizontalContentAlignment="Center"
+                              DisplayMemberPath="Text" SelectedValuePath="Value"
+                              ItemsSource="{StaticResource TextureSizeValues}"
+                              SelectedValue="{Binding TextureSize, Mode=TwoWay}"/>
+                    <TextBlock Grid.Column="1" Grid.Row="1" Text="Texture Size"
+                               Style="{StaticResource LabelStyle}"/>
+                    <TextBox Grid.Column="0" Grid.Row="2" HorizontalContentAlignment="Center"
+                             Text="{Binding Quality, Mode=TwoWay}"/>
+                    <TextBlock Grid.Column="1" Grid.Row="2" Text="Quality"
+                               Style="{StaticResource LabelStyle}"/>
+                    <TextBox Grid.Column="0" Grid.Row="3" HorizontalContentAlignment="Center"
+                             Text="{Binding Radius, Mode=TwoWay}"/>
+                    <TextBlock Grid.Column="1" Grid.Row="3" Text="Radius"
+                               Style="{StaticResource LabelStyle}"/>
+                    <TextBox Grid.Column="0" Grid.Row="4" HorizontalContentAlignment="Center"
+                             Text="{Binding Scale, Mode=TwoWay}"/>
+                    <TextBlock Grid.Column="1" Grid.Row="4" Text="Scale"
+                               Style="{StaticResource LabelStyle}"/>
+                    <TextBox Grid.Column="0" Grid.Row="5" HorizontalContentAlignment="Center"
+                             Text="{Binding Distance, Mode=TwoWay}"/>
+                    <TextBlock Grid.Column="1" Grid.Row="5" Text="Distance"
+                               Style="{StaticResource LabelStyle}"/>
+                </Grid>
+            </ScrollViewer>
+        </DockPanel>
+        <Border Background="#80000000"
+                Visibility="{Binding IsRunning, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <mah:ProgressRing/>
         </Border>
-    </DockPanel>
-</Window>
+    </Grid>
+</mah:MetroWindow>
