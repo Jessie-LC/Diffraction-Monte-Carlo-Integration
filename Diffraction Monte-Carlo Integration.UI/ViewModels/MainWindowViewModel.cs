@@ -9,6 +9,8 @@ namespace Diffraction_Monte_Carlo_Integration.UI.ViewModels
 {
     internal class MainWindowViewModel : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler PropertyChanged;
+
         private bool _isRunning;
 
         public bool IsRunning {
@@ -47,8 +49,6 @@ namespace Diffraction_Monte_Carlo_Integration.UI.ViewModels
 
             IsRunning = false;
         }
-
-        public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
