@@ -506,7 +506,7 @@ int ComputeDiffractionImage(bool squareScale, int size, float quality, float rad
 
     cudaMallocManaged(&diffraction, int(settings.size * settings.size) * sizeof(thrust::complex<float>));
 
-    int threadsPerBlock = 64;
+    int threadsPerBlock = settings.size / 2;
     int numberOfBlocks = settings.size * settings.size / threadsPerBlock;
 
     float* irradiance = (float*)malloc(int(settings.size * settings.size * wavelengthCount) * sizeof(float));
@@ -519,7 +519,7 @@ int ComputeDiffractionImage(bool squareScale, int size, float quality, float rad
 
         cudaDeviceSynchronize();
 
-        fprintf(stderr, "\b\b\b\b%3d%c", (int)(100 * i / (wavelengthCount - 1)), '%');
+        //fprintf(stderr, "\b\b\b\b%3d%c", (int)(100 * i / (wavelengthCount - 1)), '%');
 
         for (int y = 0; y < settings.size; ++y) {
             for (int x = 0; x < settings.size; ++x) {
@@ -586,5 +586,5 @@ extern "C" {
 }
 
 int main() {
-    return ComputeDiffractionImage(false, 1024, 1.0f, 2.0f, 10.0f, 10.0f);
+    return ComputeDiffractionImage(false, 256, 1.0f, 4.0f, 500.0f, 15.0f);
 }

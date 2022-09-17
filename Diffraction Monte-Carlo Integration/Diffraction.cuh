@@ -9,7 +9,7 @@
 
 #include "glm/glm.hpp"
 
-const int wavelengthCount = 50;
+const int wavelengthCount = 1;
 
 struct DiffractionSettings {
 	bool squareScale;
