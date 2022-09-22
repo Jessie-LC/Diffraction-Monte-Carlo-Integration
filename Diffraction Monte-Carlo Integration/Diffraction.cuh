@@ -9,7 +9,7 @@
 
 #include "glm/glm.hpp"
 
-const int wavelengthCount = 35;
+const int wavelengthCount = 50;
 
 struct DiffractionSettings {
 	bool squareScale;
@@ -21,4 +21,4 @@ struct DiffractionSettings {
 	float dist;
 };
 
-__global__ void DiffractionIntegral(thrust::complex<float>* diff, int wavelength, DiffractionSettings settings);
+__global__ void DiffractionIntegral(float* diff, int wavelength, DiffractionSettings settings);

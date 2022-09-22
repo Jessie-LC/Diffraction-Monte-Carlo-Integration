@@ -60,12 +60,12 @@ __device__ vec2 BokehShape(RNG_State& rng) {
     return axis;
 }
 
-__global__ void DiffractionIntegral(thrust::complex<float>* diff, int wavelengthIndex, DiffractionSettings settings) {
+__global__ void DiffractionIntegral(float* diff, int wavelengthIndex, DiffractionSettings settings) {
     int globalThreadIndex = blockIdx.x * blockDim.x + threadIdx.x;
     int x = globalThreadIndex % settings.size;
     int y = globalThreadIndex / settings.size;
 
-    unsigned s = unsigned(x * settings.size + y) * 720720u;
+    unsigned s = unsigned(x * settings.size + y) * 720720u + unsigned(wavelengthIndex);
 
     RNG_State rng;
     init_msws(uint32_t(s), rng);
@@ -80,6 +80,7 @@ __global__ void DiffractionIntegral(thrust::complex<float>* diff, int wavelength
     int steps = int((pow(radius, 2.0f) * pow(dist, 2.0f)) * settings.quality);
     thrust::complex<float> integral = thrust::complex<float>(0.0f, 0.0f);
     for (int i = 0; i < steps; ++i) {
+        //printf("\b\b\b\b%3d%c", (int)(100 * i / (steps - 1)), '%');
 
         vec2 uv = scale * ((vec2(x, y) / vec2(settings.size, settings.size)) - 0.5f);
         vec2 rngUV = BokehShape(rng) * radius;
@@ -107,5 +108,5 @@ __global__ void DiffractionIntegral(thrust::complex<float>* diff, int wavelength
 
     integral = (thrust::complex<float>(1.0f, 0.0f) / (thrust::complex<float>(0.0f, 1.0f) * wavelength)) * integral;
 
-    diff[x + y * settings.size] = integral;
+    diff[x + y * settings.size] = pow(abs(integral), 2.0f);
 }

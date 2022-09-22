@@ -492,7 +492,7 @@ float Plancks(float t, float lambda) {
     return p1 / p2;
 }
 
-int ComputeDiffractionImage(bool squareScale, int size, float quality, float radius, float scale, float dist) {
+int ComputeDiffractionImage(bool squareScale, int size, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
     DiffractionSettings settings;
 
     settings.squareScale = squareScale;
@@ -502,89 +502,79 @@ int ComputeDiffractionImage(bool squareScale, int size, float quality, float rad
     settings.scale = scale;
     settings.dist = dist;
 
-    thrust::complex<float>* diffraction;
+    float* diffraction;
 
-    cudaMallocManaged(&diffraction, int(settings.size * settings.size) * sizeof(thrust::complex<float>));
+    cudaMallocManaged(&diffraction, int(settings.size * settings.size) * sizeof(float));
 
     int threadsPerBlock = settings.size / 2;
     int numberOfBlocks = settings.size * settings.size / threadsPerBlock;
 
-    float* irradiance = (float*)malloc(int(settings.size * settings.size * wavelengthCount) * sizeof(float));
+    DiffractionIntegral << <numberOfBlocks, threadsPerBlock >> > (diffraction, wavelengthIndex, settings);
 
-    auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < wavelengthCount; ++i) {
-        float wavelength = (441.0f * (float(i) / (wavelengthCount - 1))) + 390.0f;
+    cudaDeviceSynchronize();
 
-        DiffractionIntegral << <numberOfBlocks, threadsPerBlock >> > (diffraction, i, settings);
-
-        cudaDeviceSynchronize();
-
-        //fprintf(stderr, "\b\b\b\b%3d%c", (int)(100 * i / (wavelengthCount - 1)), '%');
-
-        for (int y = 0; y < settings.size; ++y) {
-            for (int x = 0; x < settings.size; ++x) {
-                int index = x + y * settings.size + i * (settings.size * settings.size);
-                float solarIrradiance = Plancks(5778.0f, wavelength) * (radians(360.0f) * (1.0f - cos(0.5f * radians(0.545f))));
-                irradiance[index] = pow(abs(diffraction[x + y * settings.size]), 2.0f);
-                if (irradiance[index] != irradiance[index]) {
-                    irradiance[index] = 0.0f;
-                }
-            }
-        }
-    }
-
-    auto end = std::chrono::high_resolution_clock::now();
-
-    std::chrono::hours   hours   =   std::chrono::duration_cast<std::chrono::hours>(end - start);
-    std::chrono::minutes minutes = std::chrono::duration_cast<std::chrono::minutes>(end - start);
-    std::chrono::seconds seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-    std::chrono::milliseconds mseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-    std::cout << " " << std::endl;
-
-    std::cout << "Time: " << hours.count() << "h" << " " << minutes.count() << "m" << " " << seconds.count() << "s" << " " << mseconds.count() << "ms" << std::endl;
-
-    vec3 *Image = (vec3*)malloc(int(settings.size * settings.size * wavelengthCount) * sizeof(vec3));
-
-    for (int x = 0; x < settings.size; ++x) {
-        for (int y = 0; y < settings.size; ++y) {
-            Image[x + y * settings.size] = glm::vec3(0.0f);
-        }
-    }
+    Wavelength[wavelengthIndex] = (441.0f * (float(wavelengthIndex) / (wavelengthCount - 1))) + 390.0f;
 
     for (int y = 0; y < settings.size; ++y) {
         for (int x = 0; x < settings.size; ++x) {
-            for (int i = 0; i < wavelengthCount; ++i) {
-                int index = x + y * settings.size + i * (settings.size * settings.size);
-                float wavelength = (441.0f * (float(i) / (wavelengthCount - 1))) + 390.0f;
-                Image[x + y * settings.size] += SpectrumToXYZ(irradiance[index] * 1e8f, wavelength) * xyzToRGBMatrix;
-                if (Image[x + y * settings.size] != Image[x + y * settings.size]) {
-                    Image[x + y * settings.size] = vec3(0.0f);
-                }
-            }
+            Irradiance[x + y * settings.size + wavelengthIndex * (settings.size * settings.size)] = diffraction[x + y * settings.size];
         }
     }
-
-    for (int x = 0; x < settings.size; ++x) {
-        for (int y = 0; y < settings.size; ++y) {
-            Image[x + y * settings.size] = Image[x + y * settings.size] / float(wavelengthCount);
-        }
-    }
-
-    std::ofstream scatteringLut("Diffraction.dat", std::ios::binary);
-    scatteringLut.write(reinterpret_cast<char*>(Image), sizeof(vec3) * settings.size * settings.size);
-    scatteringLut.close();
-    std::cout << "Finished generating diffraction!" << std::endl;
 
     return 0;
 }
 
 extern "C" {
-    __declspec(dllexport) int ComputeDiffractionImageExport(bool squareScale, int size, float quality, float radius, float scale, float dist) {
-        return ComputeDiffractionImage(squareScale, size, quality, radius, scale, dist);
+    __declspec(dllexport) int ComputeDiffractionImageExport(bool squareScale, int size, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
+        return ComputeDiffractionImage(squareScale, size, wavelengthIndex, quality, radius, scale, dist, Integral, Wavelength);
     }
 }
 
 int main() {
-    return ComputeDiffractionImage(false, 256, 1.0f, 4.0f, 500.0f, 15.0f);
+    int size = 256;
+    bool squareScale = false;
+    float radius = 4.0f;
+    float quality = 1.0f;
+    float scale = 500.0f;
+    float dist = 15.0f;
+
+    float* Irradiance = (float*)malloc(int(size * size * wavelengthCount) * sizeof(float));
+    float* Wavelength = (float*)malloc(int(wavelengthCount) * sizeof(float));
+
+    for (int i = 0; i < wavelengthCount; ++i) {
+        int fuck = ComputeDiffractionImage(squareScale, size, i, quality, radius, scale, dist, Irradiance, Wavelength);
+    }
+
+    vec3* Image = (vec3*)malloc(int(size * size) * sizeof(vec3));
+
+    for (int x = 0; x < size; ++x) {
+        for (int y = 0; y < size; ++y) {
+            Image[x + y * size] = glm::vec3(0.0f);
+        }
+    }
+
+    for (int y = 0; y < size; ++y) {
+        for (int x = 0; x < size; ++x) {
+            for (int i = 0; i < wavelengthCount; ++i) {
+                int index = x + y * size + i * (size * size);
+                Image[x + y * size] += SpectrumToXYZ(Irradiance[index] * 1e8f, Wavelength[i]) * xyzToRGBMatrix;
+                if (Image[x + y * size] != Image[x + y * size]) {
+                    Image[x + y * size] = vec3(0.0f);
+                }
+            }
+        }
+    }
+
+    for (int x = 0; x < size; ++x) {
+        for (int y = 0; y < size; ++y) {
+            Image[x + y * size] = Image[x + y * size] / float(wavelengthCount);
+        }
+    }
+
+    std::ofstream scatteringLut("Diffraction.dat", std::ios::binary);
+    scatteringLut.write(reinterpret_cast<char*>(Image), sizeof(vec3) * size * size);
+    scatteringLut.close();
+    std::cout << "Finished generating diffraction!" << std::endl;
+
+    return 0;
 }
