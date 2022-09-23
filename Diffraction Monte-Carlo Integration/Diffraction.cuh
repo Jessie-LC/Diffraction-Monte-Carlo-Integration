@@ -6,14 +6,15 @@
 #include <chrono>
 #include <fstream>
 #include <cstddef>
+#include <thread>
+#include <atomic>
 
 #include "glm/glm.hpp"
-
-const int wavelengthCount = 50;
 
 struct DiffractionSettings {
 	bool squareScale;
 	int size;
+	int wavelengthCount;
 
 	float quality;
 	float radius;

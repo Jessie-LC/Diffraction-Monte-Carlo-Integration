@@ -492,10 +492,13 @@ float Plancks(float t, float lambda) {
     return p1 / p2;
 }
 
-int ComputeDiffractionImage(bool squareScale, int size, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
+int ComputeDiffractionImage(int wavelengthCount, bool squareScale, int size, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
+    cudaSetDevice(0);
+
     DiffractionSettings settings;
 
     settings.squareScale = squareScale;
+    settings.wavelengthCount = wavelengthCount;
     settings.size = size;
     settings.quality = quality;
     settings.radius = radius;
@@ -524,13 +527,23 @@ int ComputeDiffractionImage(bool squareScale, int size, int wavelengthIndex, flo
     return 0;
 }
 
+std::atomic<int> atomicIterate;
+
+void ComputeDiffractionImageAtomic(int wavelengthCount, bool squareScale, int size, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
+    for (int i = 0; (i = atomicIterate) < wavelengthCount; ++i) {
+        atomicIterate++;
+        int fuck = ComputeDiffractionImage(wavelengthCount, squareScale, size, i, quality, radius, scale, dist, Irradiance, Wavelength);
+    }
+}
+
 extern "C" {
-    __declspec(dllexport) int ComputeDiffractionImageExport(bool squareScale, int size, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
-        return ComputeDiffractionImage(squareScale, size, wavelengthIndex, quality, radius, scale, dist, Integral, Wavelength);
+    __declspec(dllexport) int ComputeDiffractionImageExport(int wavelengthCount, bool squareScale, int size, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
+        return ComputeDiffractionImage(wavelengthCount, squareScale, size, wavelengthIndex, quality, radius, scale, dist, Irradiance, Wavelength);
     }
 }
 
 int main() {
+    const int wavlengthCount = 30;
     int size = 256;
     bool squareScale = false;
     float radius = 4.0f;
@@ -541,8 +554,12 @@ int main() {
     float* Irradiance = (float*)malloc(int(size * size * wavelengthCount) * sizeof(float));
     float* Wavelength = (float*)malloc(int(wavelengthCount) * sizeof(float));
 
+    std::thread t1[wavelengthCount];
     for (int i = 0; i < wavelengthCount; ++i) {
-        int fuck = ComputeDiffractionImage(squareScale, size, i, quality, radius, scale, dist, Irradiance, Wavelength);
+        t1[i] = std::thread(ComputeDiffractionImageAtomic, wavlengthCount, squareScale, size, quality, radius, scale, dist, Irradiance, Wavelength);
+    }
+    for (int i = 0; i < wavelengthCount; ++i) {
+        t1[i].join();
     }
 
     vec3* Image = (vec3*)malloc(int(size * size) * sizeof(vec3));
