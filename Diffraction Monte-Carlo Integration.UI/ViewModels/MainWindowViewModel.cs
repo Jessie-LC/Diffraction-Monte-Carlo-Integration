@@ -1,6 +1,7 @@
 ﻿using Diffraction_Monte_Carlo_Integration.UI.Internal;
 using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,6 +22,7 @@ namespace Diffraction_Monte_Carlo_Integration.UI.ViewModels
             }
         }
 
+        public int WavelengthCount {get; set;}
         public bool SquareScale {get; set;}
         public int TextureSize {get; set;}
         public float Quality {get; set;}
@@ -31,6 +33,7 @@ namespace Diffraction_Monte_Carlo_Integration.UI.ViewModels
 
         public MainWindowViewModel()
         {
+            WavelengthCount = 12;
             SquareScale = false;
             TextureSize = 256;
             Quality = 1.0f;
@@ -43,9 +46,18 @@ namespace Diffraction_Monte_Carlo_Integration.UI.ViewModels
         {
             IsRunning = true;
 
-            var result = await Task.Run(() => DMCIWrapper.ComputeDiffractionImageExport(SquareScale, TextureSize, Quality, Radius, Scale, Distance), token);
-            if (result != 0) throw new ApplicationException("Failed to generate image! An internal exception has occurred.");
-            //await Task.Delay(3_000, token);
+            var options = new ParallelOptions {
+                MaxDegreeOfParallelism = WavelengthCount, //Environment.ProcessorCount * 2,
+                CancellationToken = token,
+            };
+
+            var irradianceBuffer = new float[TextureSize * TextureSize * WavelengthCount];
+            var wavelengthBuffer = new float[WavelengthCount];
+
+            await Parallel.ForEachAsync(Enumerable.Range(0, WavelengthCount), options, async (w, t) => {
+                await Task.Run(() => DMCIWrapper.ComputeDiffractionImageExport(WavelengthCount, SquareScale, TextureSize, w, Quality, Radius, Scale, Distance, irradianceBuffer, wavelengthBuffer), t);
+                //if (result != 0) throw new ApplicationException("Failed to generate image! An internal exception has occurred.");
+            });
 
             IsRunning = false;
         }

@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.32630.194
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Diffraction Monte-Carlo Integration", "Diffraction Monte-Carlo Integration\Diffraction Monte-Carlo Integration.vcxproj", "{3B0440CE-BCCF-451B-9D1E-7E5F45858CFA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Diffraction Monte-Carlo Integration.UI", "Diffraction Monte-Carlo Integration.UI\Diffraction Monte-Carlo Integration.UI.csproj", "{BB13A251-8FB9-4D5B-A71E-1688A7719E06}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Diffraction Monte-Carlo Integration.UI", "Diffraction Monte-Carlo Integration.UI\Diffraction Monte-Carlo Integration.UI.csproj", "{BB13A251-8FB9-4D5B-A71E-1688A7719E06}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -16,6 +16,7 @@ Global
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{3B0440CE-BCCF-451B-9D1E-7E5F45858CFA}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{3B0440CE-BCCF-451B-9D1E-7E5F45858CFA}.Debug|Any CPU.Build.0 = Debug|x64
 		{3B0440CE-BCCF-451B-9D1E-7E5F45858CFA}.Debug|x64.ActiveCfg = Debug|x64
 		{3B0440CE-BCCF-451B-9D1E-7E5F45858CFA}.Debug|x64.Build.0 = Debug|x64
 		{3B0440CE-BCCF-451B-9D1E-7E5F45858CFA}.Release|Any CPU.ActiveCfg = Release|x64
