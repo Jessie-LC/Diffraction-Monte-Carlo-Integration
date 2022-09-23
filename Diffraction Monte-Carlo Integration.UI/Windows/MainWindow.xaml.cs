@@ -9,9 +9,14 @@ namespace Diffraction_Monte_Carlo_Integration.UI.Windows
             InitializeComponent();
         }
 
-        private async void Button_OnClick(object sender, RoutedEventArgs e)
+        private async void RunButton_OnClick(object sender, RoutedEventArgs e)
         {
             await ViewModel.RunAsync();
+        }
+
+        private void CancelButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            ViewModel.Cancel();
         }
     }
 }

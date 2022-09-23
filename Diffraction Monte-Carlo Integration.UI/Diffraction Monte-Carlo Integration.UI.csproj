@@ -5,11 +5,11 @@
     <TargetFramework>net6.0-windows</TargetFramework>
     <RootNamespace>Diffraction_Monte_Carlo_Integration.UI</RootNamespace>
     <UseWPF>true</UseWPF>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Diffraction Monte-Carlo Integration\Diffraction Monte-Carlo Integration.vcxproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <OutputItemType>Content</OutputItemType>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </ProjectReference>

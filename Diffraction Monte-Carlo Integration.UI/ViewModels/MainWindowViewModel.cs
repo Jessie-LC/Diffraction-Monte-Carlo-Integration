@@ -1,70 +1,118 @@
 ﻿using Diffraction_Monte_Carlo_Integration.UI.Internal;
+using Diffraction_Monte_Carlo_Integration.UI.Models;
+using Microsoft.Win32;
 using System;
-using System.ComponentModel;
+using System.Buffers.Binary;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
+using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Media;
 
 namespace Diffraction_Monte_Carlo_Integration.UI.ViewModels
 {
-    internal class MainWindowViewModel : INotifyPropertyChanged
+    internal class MainWindowViewModel : IDisposable
     {
-        public event PropertyChangedEventHandler PropertyChanged;
+        private CancellationTokenSource tokenSource;
 
-        private bool _isRunning;
-
-        public bool IsRunning {
-            get => _isRunning;
-            private set {
-                _isRunning = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public int WavelengthCount {get; set;}
-        public bool SquareScale {get; set;}
-        public int TextureSize {get; set;}
-        public float Quality {get; set;}
-        public float Radius {get; set;}
-        public float Scale {get; set;}
-        public float Distance {get; set;}
+        public MainWindowModel Model {get; set;}
 
 
         public MainWindowViewModel()
         {
-            WavelengthCount = 12;
-            SquareScale = false;
-            TextureSize = 256;
-            Quality = 1.0f;
-            Radius = 2.0f;
-            Scale = 10.0f;
-            Distance = 10.0f;
+            Model = new MainWindowModel();
+        }
+
+        public void Dispose()
+        {
+            tokenSource?.Dispose();
         }
 
         public async Task RunAsync(CancellationToken token = default)
         {
-            IsRunning = true;
+            Model.IsRunning = true;
+            Model.OutputMessage = null;
+            var timer = Stopwatch.StartNew();
+
+            tokenSource?.Dispose();
+            tokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
 
             var options = new ParallelOptions {
-                MaxDegreeOfParallelism = WavelengthCount, //Environment.ProcessorCount * 2,
-                CancellationToken = token,
+                MaxDegreeOfParallelism = Model.MaxThreadCount,
+                CancellationToken = tokenSource.Token,
             };
 
-            var irradianceBuffer = new float[TextureSize * TextureSize * WavelengthCount];
-            var wavelengthBuffer = new float[WavelengthCount];
+            var wavelengthBuffer = new float[Model.WavelengthCount];
+            var irradianceBuffer = new float[Model.TextureSize * Model.TextureSize * Model.WavelengthCount];
 
-            await Parallel.ForEachAsync(Enumerable.Range(0, WavelengthCount), options, async (w, t) => {
-                await Task.Run(() => DMCIWrapper.ComputeDiffractionImageExport(WavelengthCount, SquareScale, TextureSize, w, Quality, Radius, Scale, Distance, irradianceBuffer, wavelengthBuffer), t);
-                //if (result != 0) throw new ApplicationException("Failed to generate image! An internal exception has occurred.");
-            });
+            try {
+                await Parallel.ForEachAsync(Enumerable.Range(0, Model.WavelengthCount), options, async (w, t) => {
+                    await Task.Run(() => {
+                        DMCIWrapper.ComputeDiffractionImageExport(Model.WavelengthCount, Model.SquareScale, Model.TextureSize, w, Model.Quality, Model.Radius, Model.Scale, Model.Distance, irradianceBuffer, wavelengthBuffer);
+                    }, t);
 
-            IsRunning = false;
+                    var previewImage = BuildPreviewImage(wavelengthBuffer, irradianceBuffer);
+                });
+
+                Model.OutputMessage = $"Duration: {timer.Elapsed:g}";
+            }
+            catch (OperationCanceledException) {
+                Model.OutputMessage = "Cancelled";
+                return;
+            }
+            finally {
+                Model.IsRunning = false;
+            }
+
+            var saveFileDialog = new SaveFileDialog {
+                Filter = "DAT File|*.dat",
+                FileName = "diffraction.dat",
+            };
+
+            if (saveFileDialog.ShowDialog() != true) return;
+
+            await using var stream = File.Open(saveFileDialog.FileName, FileMode.Create, FileAccess.Write);
+            await BuildFinalImageAsync(stream, wavelengthBuffer, irradianceBuffer, token);
         }
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        public void Cancel()
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            if (!Model.IsRunning) return;
+
+            Model.OutputMessage = "Cancelling...";
+            tokenSource?.Cancel();
+        }
+
+        private ImageSource BuildPreviewImage(IReadOnlyList<float> wavelengthBuffer, IReadOnlyList<float> irradianceBuffer)
+        {
+            // TODO
+            return null;
+        }
+
+        private async Task BuildFinalImageAsync(Stream stream, IReadOnlyList<float> wavelengthBuffer, IReadOnlyList<float> irradianceBuffer, CancellationToken token)
+        {
+            var buffer = new byte[12];
+
+            for (var y = 0; y < Model.TextureSize; y++) {
+                for (var x = 0; x < Model.TextureSize; x++) {
+                    var pixel = Vector3.Zero;
+
+                    for (var w = 0; w < Model.WavelengthCount; ++w) {
+                        var index = x + y * Model.TextureSize + w * (Model.TextureSize * Model.TextureSize);
+                        pixel += Spectral.SpectrumToRGB(irradianceBuffer[index] * 1e8f, wavelengthBuffer[w]);
+                    }
+
+                    pixel /= Model.WavelengthCount;
+
+                    BinaryPrimitives.WriteSingleLittleEndian(buffer.AsSpan(0, 4), float.IsNaN(pixel.X) ? 0f : pixel.X);
+                    BinaryPrimitives.WriteSingleLittleEndian(buffer.AsSpan(4, 4), float.IsNaN(pixel.Y) ? 0f : pixel.Y);
+                    BinaryPrimitives.WriteSingleLittleEndian(buffer.AsSpan(8, 4), float.IsNaN(pixel.Z) ? 0f : pixel.Z);
+                    await stream.WriteAsync(buffer, 0, 12, token);
+                }
+            }
         }
     }
 }

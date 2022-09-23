@@ -493,11 +493,12 @@ float Plancks(float t, float lambda) {
 }
 
 int ComputeDiffractionImage(int wavelengthCount, bool squareScale, int size, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
-    cudaSetDevice(0);
+    //cudaSetDevice(0);
+
+    //fprintf(stderr, "\b\b\b\b%3d%c", (int)(100 * wavelengthIndex / (wavelengthCount - 1)), '%');
 
     DiffractionSettings settings;
 
-    settings.squareScale = squareScale;
     settings.wavelengthCount = wavelengthCount;
     settings.size = size;
     settings.quality = quality;
@@ -505,9 +506,11 @@ int ComputeDiffractionImage(int wavelengthCount, bool squareScale, int size, int
     settings.scale = scale;
     settings.dist = dist;
 
+    size_t diffraction_size_bytes = (size_t)(settings.size * settings.size) * sizeof(float);
+
     float* diffraction;
 
-    cudaMallocManaged(&diffraction, int(settings.size * settings.size) * sizeof(float));
+    cudaMallocManaged(&diffraction, diffraction_size_bytes);
 
     int threadsPerBlock = settings.size / 2;
     int numberOfBlocks = settings.size * settings.size / threadsPerBlock;
@@ -516,13 +519,21 @@ int ComputeDiffractionImage(int wavelengthCount, bool squareScale, int size, int
 
     cudaDeviceSynchronize();
 
+    float* host_copy = (float*)malloc(diffraction_size_bytes);
+    cudaMemcpy(host_copy, diffraction, diffraction_size_bytes, cudaMemcpyDeviceToHost);
+
+    cudaDeviceSynchronize();
+
     Wavelength[wavelengthIndex] = (441.0f * (float(wavelengthIndex) / (wavelengthCount - 1))) + 390.0f;
 
     for (int y = 0; y < settings.size; ++y) {
         for (int x = 0; x < settings.size; ++x) {
-            Irradiance[x + y * settings.size + wavelengthIndex * (settings.size * settings.size)] = diffraction[x + y * settings.size];
+            Irradiance[x + y * settings.size + wavelengthIndex * (settings.size * settings.size)] = host_copy[x + y * settings.size];
         }
     }
+
+    free(host_copy);
+    cudaFree(diffraction);
 
     return 0;
 }
