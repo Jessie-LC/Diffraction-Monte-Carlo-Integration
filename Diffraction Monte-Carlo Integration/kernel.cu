@@ -599,7 +599,7 @@ int main() {
     //*
     std::thread t1[12];
     for (int i = 0; i < 12; ++i) {
-        t1[i] = std::thread(ComputeDiffractionImageAtomic, i, wavelengthCount, squareScale, size, quality, radius, scale, dist, Irradiance, Wavelength);
+        t1[i] = std::thread(ComputeDiffractionImageAtomic, i, wavelengthCount, squareScale, size, 3, quality, radius, scale, dist, Irradiance, Wavelength);
     }
     for (int i = 0; i < 12; ++i) {
         t1[i].join();
