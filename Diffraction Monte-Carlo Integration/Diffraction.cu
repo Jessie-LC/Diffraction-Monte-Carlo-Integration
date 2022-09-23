@@ -40,8 +40,8 @@ __device__ mat2 Rotate(float a) {
     return mat2(m.y, -m.x, m.x, m.y);
 }
 
-__device__ vec2 BokehShape(RNG_State& rng) {
-    const int blades = 3;
+__device__ vec2 BokehShape(RNG_State& rng, int bladeCount) {
+    const int blades = bladeCount;
 
     vec2 uv = RandNext2F(rng);
 
@@ -81,7 +81,7 @@ __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, Diffractio
     thrust::complex<float> integral = thrust::complex<float>(0.0f, 0.0f);
     for (int i = 0; i < steps; ++i) {
         vec2 uv = scale * ((vec2(x, y) / vec2(settings.size, settings.size)) - 0.5f);
-        vec2 rngUV = BokehShape(rng) * radius;
+        vec2 rngUV = BokehShape(rng, settings.bladeCount) * radius;
 
         float k = 2.0f * pi / wavelength;
         float r = length(vec3(uv, dist) - vec3(rngUV, 0.0f));

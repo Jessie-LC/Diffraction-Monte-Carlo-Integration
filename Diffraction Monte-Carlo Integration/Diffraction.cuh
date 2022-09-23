@@ -14,7 +14,8 @@
 struct DiffractionSettings {
 	bool squareScale;
 	int size;
-	int wavelengthCount;
+	int bladeCount;
+	int wavelengthCount; //Not an actual diffraction kernel setting, just here for ease of use in the kernel
 
 	float quality;
 	float radius;

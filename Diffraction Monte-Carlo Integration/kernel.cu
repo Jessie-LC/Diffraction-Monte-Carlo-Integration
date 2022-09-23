@@ -519,7 +519,7 @@ void FreeMemory(int threadCount) {
     free(hostCopyArrays);
 }
 
-int ComputeDiffractionImage(int threadIDX, int wavelengthCount, bool squareScale, int size, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
+int ComputeDiffractionImage(int threadIDX, int wavelengthCount, bool squareScale, int size, int bladeCount, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
     //cudaSetDevice(0);
 
     //fprintf(stderr, "\b\b\b\b%3d%c", (int)(100 * wavelengthIndex / (wavelengthCount - 1)), '%');
@@ -528,6 +528,7 @@ int ComputeDiffractionImage(int threadIDX, int wavelengthCount, bool squareScale
 
     settings.wavelengthCount = wavelengthCount;
     settings.size = size;
+    settings.bladeCount = bladeCount;
     settings.quality = quality;
     settings.radius = radius;
     settings.scale = scale;
@@ -563,16 +564,16 @@ int ComputeDiffractionImage(int threadIDX, int wavelengthCount, bool squareScale
 
 std::atomic<int> atomicIterate;
 
-void ComputeDiffractionImageAtomic(int threadIDX, int wavelengthCount, bool squareScale, int size, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
+void ComputeDiffractionImageAtomic(int threadIDX, int wavelengthCount, bool squareScale, int size, int bladeCount, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
     for (int i = 0; (i = atomicIterate) < wavelengthCount; ++i) {
         atomicIterate++;
-        int fuck = ComputeDiffractionImage(threadIDX, wavelengthCount, squareScale, size, i, quality, radius, scale, dist, Irradiance, Wavelength);
+        int fuck = ComputeDiffractionImage(threadIDX, wavelengthCount, squareScale, size, bladeCount, i, quality, radius, scale, dist, Irradiance, Wavelength);
     }
 }
 
 extern "C" {
-    __declspec(dllexport) int ComputeDiffractionImageExport(int threadIDX, int wavelengthCount, bool squareScale, int size, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
-        return ComputeDiffractionImage(threadIDX, wavelengthCount, squareScale, size, wavelengthIndex, quality, radius, scale, dist, Irradiance, Wavelength);
+    __declspec(dllexport) int ComputeDiffractionImageExport(int threadIDX, int wavelengthCount, bool squareScale, int size, int bladeCount, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
+        return ComputeDiffractionImage(threadIDX, wavelengthCount, squareScale, size, bladeCount, wavelengthIndex, quality, radius, scale, dist, Irradiance, Wavelength);
     }
     __declspec(dllexport) void AllocateMemory(int threadCount, int size) {
         return InitializeMemory(threadCount, size);
