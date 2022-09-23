@@ -474,6 +474,8 @@ glm::vec3 SpectrumToXYZ(float spectrum, float w) {
 
         glm::vec3 xyz = mix(c0, c1, fract(n));
 
+        spectrum = spectrum * scale;
+
         xyz = xyz * vec3(spectrum, spectrum, spectrum);
 
         //Normalize the conversion
@@ -492,7 +494,32 @@ float Plancks(float t, float lambda) {
     return p1 / p2;
 }
 
-int ComputeDiffractionImage(int wavelengthCount, bool squareScale, int size, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
+float** diffractionArrays;
+float** hostCopyArrays;
+
+void InitializeMemory(int threadCount, int size) {
+    diffractionArrays = (float**)malloc(threadCount * sizeof(float*));
+    hostCopyArrays = (float**)malloc(threadCount * sizeof(float*));
+
+    for (int i = 0; i < threadCount; ++i) {
+        size_t diffractionSizeBytes = (size_t)(size * size) * sizeof(float);
+
+        cudaMalloc(&(diffractionArrays[i]), diffractionSizeBytes);
+        hostCopyArrays[i] = (float*)malloc(diffractionSizeBytes);
+    }
+}
+
+void FreeMemory(int threadCount) {
+    for (int i = 0; i < threadCount; ++i) {
+        cudaFree(diffractionArrays[i]);
+        free(hostCopyArrays[i]);
+    }
+
+    free(diffractionArrays);
+    free(hostCopyArrays);
+}
+
+int ComputeDiffractionImage(int threadIDX, int wavelengthCount, bool squareScale, int size, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
     //cudaSetDevice(0);
 
     //fprintf(stderr, "\b\b\b\b%3d%c", (int)(100 * wavelengthIndex / (wavelengthCount - 1)), '%');
@@ -508,19 +535,18 @@ int ComputeDiffractionImage(int wavelengthCount, bool squareScale, int size, int
 
     size_t diffraction_size_bytes = (size_t)(settings.size * settings.size) * sizeof(float);
 
-    float* diffraction;
+    //float* diffraction;
 
-    cudaMallocManaged(&diffraction, diffraction_size_bytes);
+    //cudaMallocManaged(&diffraction, diffraction_size_bytes);
 
     int threadsPerBlock = settings.size / 2;
     int numberOfBlocks = settings.size * settings.size / threadsPerBlock;
 
-    DiffractionIntegral << <numberOfBlocks, threadsPerBlock >> > (diffraction, wavelengthIndex, settings);
+    DiffractionIntegral << <numberOfBlocks, threadsPerBlock >> > (diffractionArrays[threadIDX], wavelengthIndex, settings);
 
     cudaDeviceSynchronize();
 
-    float* host_copy = (float*)malloc(diffraction_size_bytes);
-    cudaMemcpy(host_copy, diffraction, diffraction_size_bytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(hostCopyArrays[threadIDX], diffractionArrays[threadIDX], diffraction_size_bytes, cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
 
@@ -528,28 +554,31 @@ int ComputeDiffractionImage(int wavelengthCount, bool squareScale, int size, int
 
     for (int y = 0; y < settings.size; ++y) {
         for (int x = 0; x < settings.size; ++x) {
-            Irradiance[x + y * settings.size + wavelengthIndex * (settings.size * settings.size)] = host_copy[x + y * settings.size];
+            Irradiance[x + y * settings.size + wavelengthIndex * (settings.size * settings.size)] = hostCopyArrays[threadIDX][x + y * settings.size];
         }
     }
-
-    free(host_copy);
-    cudaFree(diffraction);
 
     return 0;
 }
 
 std::atomic<int> atomicIterate;
 
-void ComputeDiffractionImageAtomic(int wavelengthCount, bool squareScale, int size, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
+void ComputeDiffractionImageAtomic(int threadIDX, int wavelengthCount, bool squareScale, int size, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
     for (int i = 0; (i = atomicIterate) < wavelengthCount; ++i) {
         atomicIterate++;
-        int fuck = ComputeDiffractionImage(wavelengthCount, squareScale, size, i, quality, radius, scale, dist, Irradiance, Wavelength);
+        int fuck = ComputeDiffractionImage(threadIDX, wavelengthCount, squareScale, size, i, quality, radius, scale, dist, Irradiance, Wavelength);
     }
 }
 
 extern "C" {
-    __declspec(dllexport) int ComputeDiffractionImageExport(int wavelengthCount, bool squareScale, int size, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
-        return ComputeDiffractionImage(wavelengthCount, squareScale, size, wavelengthIndex, quality, radius, scale, dist, Irradiance, Wavelength);
+    __declspec(dllexport) int ComputeDiffractionImageExport(int threadIDX, int wavelengthCount, bool squareScale, int size, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
+        return ComputeDiffractionImage(threadIDX, wavelengthCount, squareScale, size, wavelengthIndex, quality, radius, scale, dist, Irradiance, Wavelength);
+    }
+    __declspec(dllexport) void AllocateMemory(int threadCount, int size) {
+        return InitializeMemory(threadCount, size);
+    }
+    __declspec(dllexport) void FreeMemory(int threadCount) {
+        return FreeMemory(threadCount);
     }
 }
 
@@ -565,13 +594,29 @@ int main() {
     float* Irradiance = (float*)malloc(int(size * size * wavelengthCount) * sizeof(float));
     float* Wavelength = (float*)malloc(int(wavelengthCount) * sizeof(float));
 
-    std::thread t1[wavelengthCount];
-    for (int i = 0; i < wavelengthCount; ++i) {
-        t1[i] = std::thread(ComputeDiffractionImageAtomic, wavelengthCount, squareScale, size, quality, radius, scale, dist, Irradiance, Wavelength);
+    InitializeMemory(12, size);
+    //*
+    std::thread t1[12];
+    for (int i = 0; i < 12; ++i) {
+        t1[i] = std::thread(ComputeDiffractionImageAtomic, i, wavelengthCount, squareScale, size, quality, radius, scale, dist, Irradiance, Wavelength);
     }
-    for (int i = 0; i < wavelengthCount; ++i) {
+    for (int i = 0; i < 12; ++i) {
         t1[i].join();
     }
+    //*/
+
+    /*
+    size_t diffraction_size_bytes = (size_t)(size * size) * sizeof(float);
+
+    cudaMalloc(&(diffractionArrays[0]), diffraction_size_bytes);
+    hostCopyArrays[0] = (float*)malloc(diffraction_size_bytes);
+
+    for (int i = 0; i < wavelengthCount; ++i) {
+        int fuck = ComputeDiffractionImage(0, wavelengthCount, squareScale, size, i, quality, radius, scale, dist, Irradiance, Wavelength);
+    }
+    //*/
+
+    FreeMemory(12);
 
     vec3* Image = (vec3*)malloc(int(size * size) * sizeof(vec3));
 

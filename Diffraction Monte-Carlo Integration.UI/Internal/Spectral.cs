@@ -1,10 +1,11 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 
 namespace Diffraction_Monte_Carlo_Integration.UI.Internal;
 
 internal static class Spectral
 {
-    public static Vector3 SpectrumToXYZ(in float spectrum, in float w) {
+    public static Vector3 SpectrumToXYZ(float spectrum, in float w) {
         var n = w - 390f;
         var n0 = (int)n;
         if (n0 is < 0 or >= 830 - 390)
@@ -13,9 +14,11 @@ internal static class Spectral
         //var n0 = Math.Min(i - 1, (int)n);
         //var n1 = Math.Min(i - 1, n0 + 1);
         //var n0 = (int)i;
-        var n1 = n0 + 1;
+        var n1 = Math.Min(n0 + 1, 440);
 
         var xyz = Vector3.Lerp(cie[n0], cie[n1], n % 1);
+
+        spectrum = spectrum * (683.0f / cie[(int)(2.99792458e17f / 540e12f) - 390].Y);
 
         xyz *= new Vector3(spectrum, spectrum, spectrum);
 
@@ -29,11 +32,10 @@ internal static class Spectral
         return Vector3.Transform(xyz, xyzToRGBMatrix);
     }
 
-
     private static readonly Matrix4x4 xyzToRGBMatrix = new(
-        3.2409699419f, -1.5373831776f, -0.4986107603f, 0f,
-        -0.9692436363f,  1.8759675015f,  0.0415550574f, 0f,
-        0.0556300797f, -0.2039769589f,  1.0569715142f, 0f,
+        3.2409699419f, -0.9692436363f, 0.0556300797f, 0f,
+        -1.5373831776f, 1.8759675015f, -0.2039769589f, 0f,
+        -0.4986107603f, 0.0415550574f, 1.0569715142f, 0f,
         0f, 0f, 0f, 1f);
 
     private static readonly Vector3[] cie = {
