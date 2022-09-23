@@ -47,6 +47,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <CheckBox Grid.Column="0" Grid.Row="0" HorizontalAlignment="Center"
                               IsChecked="{Binding SquareScale, Mode=TwoWay}"/>
@@ -73,6 +74,10 @@
                     <TextBox Grid.Column="0" Grid.Row="5" HorizontalContentAlignment="Center"
                              Text="{Binding Distance, Mode=TwoWay}"/>
                     <TextBlock Grid.Column="1" Grid.Row="5" Text="Distance"
+                               Style="{StaticResource LabelStyle}"/>
+                    <TextBox Grid.Column="0" Grid.Row="6" HorizontalContentAlignment="Center"
+                             Text="{Binding WavelengthCount, Mode=TwoWay}"/>
+                    <TextBlock Grid.Column="1" Grid.Row="6" Text="Wavelength Count"
                                Style="{StaticResource LabelStyle}"/>
                 </Grid>
             </ScrollViewer>
