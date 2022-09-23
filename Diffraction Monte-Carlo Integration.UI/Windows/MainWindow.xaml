@@ -100,10 +100,6 @@
                           HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                 <Grid>
                     <Image Source="{Binding Model.PreviewImage, Mode=OneWay}"/>
-                    <TextBlock Text="Preview Coming Soon" FontSize="16" FontStyle="Italic"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Foreground="{DynamicResource MahApps.Brushes.Gray}"
-                               Visibility="Collapsed"/>
                 </Grid>
             </ScrollViewer>
         </Grid>

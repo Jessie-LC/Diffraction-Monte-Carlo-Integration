@@ -58,7 +58,7 @@ internal static class ImageBuilder
 
                 for (var w = 0; w < imageData.WavelengthCount; w++) {
                     var index = x + y * imageData.Size + w * (imageData.Size * imageData.Size);
-                    pixel += Spectral.SpectrumToRGB(imageData.Irradiance[index] * 1e8f, imageData.Wavelength[w]);
+                    pixel += Spectral.SpectrumToRGB(imageData.Irradiance[index], imageData.Wavelength[w]);
                 }
 
                 pixel /= imageData.WavelengthCount;
