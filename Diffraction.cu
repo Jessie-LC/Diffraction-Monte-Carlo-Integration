@@ -77,7 +77,7 @@ __global__ void __launch_bounds__(256) DiffractionIntegral(float* diff, int wave
 
     float wavelength = ((441.0f * (float(wavelengthIndex) / (settings.wavelengthCount - 1))) + 390.0f) * 1e-3f;
 
-    int steps = int((pow(radius, 2.0f) * dist) * settings.quality);
+    int steps = int((pow(radius, 2.0f) * pow(dist, 2.0f)) * settings.quality);
     thrust::complex<float> integral = thrust::complex<float>(0.0f, 0.0f);
     for (int i = 0; i < steps; ++i) {
 
