@@ -13,7 +13,7 @@
         <viewData:TextureSizeValues x:Key="TextureSizeValues"/>
     </Window.Resources>
     <Window.DataContext>
-        <viewModels:MainWindowViewModel x:Name="ViewModel"/>
+        <viewModels:MainWindowViewModel x:Name="ViewModel" SpectralImageDataUpdated="OnSpectralImageDataUpdated"/>
     </Window.DataContext>
     <DockPanel>
         <Border DockPanel.Dock="Bottom" Background="{StaticResource MahApps.Brushes.Highlight}">
@@ -99,11 +99,11 @@
             <ScrollViewer Grid.Column="1" Background="Black"
                           HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                 <Grid>
-                    <Image Visibility="Collapsed"
-                           Source="{Binding Model.PreviewImage, Mode=OneWay}"/>
+                    <Image Source="{Binding Model.PreviewImage, Mode=OneWay}"/>
                     <TextBlock Text="Preview Coming Soon" FontSize="16" FontStyle="Italic"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Foreground="{DynamicResource MahApps.Brushes.Gray}"/>
+                               Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                               Visibility="Collapsed"/>
                 </Grid>
             </ScrollViewer>
         </Grid>

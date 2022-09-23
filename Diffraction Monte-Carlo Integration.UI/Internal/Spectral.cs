@@ -1,5 +1,4 @@
-﻿using System;
-using System.Numerics;
+﻿using System.Numerics;
 
 namespace Diffraction_Monte_Carlo_Integration.UI.Internal;
 
@@ -7,12 +6,14 @@ internal static class Spectral
 {
     public static Vector3 SpectrumToXYZ(in float spectrum, in float w) {
         var n = w - 390f;
-        var i = (int)n;
-        if (i is <= 0 or >= 830 - 390)
+        var n0 = (int)n;
+        if (n0 is < 0 or >= 830 - 390)
             return Vector3.Zero;
 
-        var n0 = Math.Min(i - 1, (int)n);
-        var n1 = Math.Min(i - 1, n0 + 1);
+        //var n0 = Math.Min(i - 1, (int)n);
+        //var n1 = Math.Min(i - 1, n0 + 1);
+        //var n0 = (int)i;
+        var n1 = n0 + 1;
 
         var xyz = Vector3.Lerp(cie[n0], cie[n1], n % 1);
 

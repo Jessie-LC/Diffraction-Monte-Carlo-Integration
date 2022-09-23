@@ -6,6 +6,7 @@
     <RootNamespace>Diffraction_Monte_Carlo_Integration.UI</RootNamespace>
     <UseWPF>true</UseWPF>
     <Platforms>AnyCPU;x64</Platforms>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
