@@ -5,7 +5,6 @@ using SixLabors.ImageSharp;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,7 +20,6 @@ internal class MainWindowViewModel : IDisposable
     public event EventHandler<SpectralImageDataEventArgs> SpectralImageDataUpdated;
 
     private CancellationTokenSource tokenSource;
-    //private SpectralImageData imageData;
 
     public MainWindowModel Model {get; set;}
 
@@ -47,22 +45,29 @@ internal class MainWindowViewModel : IDisposable
 
         var timer = Stopwatch.StartNew();
 
-        var options = new ParallelOptions {
-            MaxDegreeOfParallelism = Model.MaxThreadCount,
-            CancellationToken = tokenSource.Token,
-        };
-
         var imageData = new SpectralImageData(Model.TextureSize, Model.WavelengthCount);
 
         try {
-            await Parallel.ForEachAsync(Enumerable.Range(0, Model.WavelengthCount), options, async (w, t) => {
-                await Task.Run(() => {
-                    DMCIWrapper.ComputeDiffractionImageExport(Model.WavelengthCount, Model.SquareScale, Model.TextureSize, w, Model.Quality, Model.Radius, Model.Scale, Model.Distance, imageData.Irradiance, imageData.Wavelength);
-                }, t);
+            DMCIWrapper.AllocateMemory(Model.MaxThreadCount, Model.TextureSize);
 
-                //var previewImage = BuildPreviewImage(wavelengthBuffer, irradianceBuffer);
-                OnSpectralImageDataUpdated(imageData);
-            });
+            var wavelengthIndex = -1;
+            var taskList = new Task[Model.MaxThreadCount];
+
+            for (var i = 0; i < Model.MaxThreadCount; i++) {
+                var ii = i;
+                taskList[i] = Task.Run(() => {
+                    int w;
+                    while ((w = Interlocked.Increment(ref wavelengthIndex)) < Model.WavelengthCount) {
+                        tokenSource.Token.ThrowIfCancellationRequested();
+
+                        DMCIWrapper.ComputeDiffractionImageExport(ii, Model.WavelengthCount, Model.SquareScale, Model.TextureSize, w, Model.Quality, Model.Radius, Model.Scale, Model.Distance, imageData.Irradiance, imageData.Wavelength);
+
+                        OnSpectralImageDataUpdated(imageData);
+                    }
+                }, tokenSource.Token);
+            }
+
+            await Task.WhenAll(taskList);
 
             Model.OutputMessage = $"Duration: {timer.Elapsed:g}";
         }
@@ -71,6 +76,7 @@ internal class MainWindowViewModel : IDisposable
             return;
         }
         finally {
+            DMCIWrapper.ClearMemory(Model.MaxThreadCount);
             Model.IsRunning = false;
         }
 

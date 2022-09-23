@@ -577,7 +577,7 @@ extern "C" {
     __declspec(dllexport) void AllocateMemory(int threadCount, int size) {
         return InitializeMemory(threadCount, size);
     }
-    __declspec(dllexport) void FreeMemory(int threadCount) {
+    __declspec(dllexport) void ClearMemory(int threadCount) {
         return FreeMemory(threadCount);
     }
 }

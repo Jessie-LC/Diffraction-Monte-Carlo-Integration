@@ -18,7 +18,7 @@ internal static class Spectral
 
         var xyz = Vector3.Lerp(cie[n0], cie[n1], n % 1);
 
-        spectrum = spectrum * (683.0f / cie[(int)(2.99792458e17f / 540e12f) - 390].Y);
+        spectrum *= 683.0f / cie[(int)(2.99792458e17f / 540e12f) - 390].Y;
 
         xyz *= new Vector3(spectrum, spectrum, spectrum);
 

@@ -27,14 +27,11 @@ internal static class ImageBuilder
                             if (imageData.Wavelength[w] <= float.Epsilon) continue;
 
                             var irradianceIndex = x + pos.Y * imageData.Size + w * (imageData.Size * imageData.Size);
-                            pixel += Spectral.SpectrumToRGB(imageData.Irradiance[irradianceIndex] * 1e8f, imageData.Wavelength[w]);
+                            pixel += Spectral.SpectrumToRGB(imageData.Irradiance[irradianceIndex], imageData.Wavelength[w]);
                             finalWavelengthCount++;
                         }
 
                         pixel /= finalWavelengthCount;
-
-                        // WARN: for testing only!
-                        pixel *= 1e-5f;
 
                         row[x].X = pixel.X;
                         row[x].Y = pixel.Y;
