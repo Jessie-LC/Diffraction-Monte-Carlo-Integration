@@ -10,10 +10,9 @@
 
 #include "glm/glm.hpp"
 
-const int wavelengthCount = 50;
-
 struct DiffractionSettings {
 	int size;
+	int wavelengthCount;
 
 	float quality;
 	float radius;
@@ -21,4 +20,4 @@ struct DiffractionSettings {
 	float dist;
 };
 
-__global__ void DiffractionIntegral(thrust::complex<float>* diff, int wavelength, DiffractionSettings settings);
+__global__ void DiffractionIntegral(float* diff, int wavelength, DiffractionSettings settings);

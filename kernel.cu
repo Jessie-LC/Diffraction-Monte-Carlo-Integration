@@ -497,7 +497,6 @@ int ComputeDiffractionImage(int wavelengthCount, bool squareScale, int size, int
 
     DiffractionSettings settings;
 
-    settings.squareScale = squareScale;
     settings.wavelengthCount = wavelengthCount;
     settings.size = size;
     settings.quality = quality;
