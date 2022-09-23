@@ -14,7 +14,7 @@ internal static class Spectral
         var n0 = Math.Min(i - 1, (int)n);
         var n1 = Math.Min(i - 1, n0 + 1);
 
-        var xyz = Vector3.Lerp(cie[n0], cie[n1], MathF.Truncate(n));
+        var xyz = Vector3.Lerp(cie[n0], cie[n1], n % 1);
 
         xyz *= new Vector3(spectrum, spectrum, spectrum);
 

@@ -1,6 +1,9 @@
 ﻿using Diffraction_Monte_Carlo_Integration.UI.Internal;
 using Diffraction_Monte_Carlo_Integration.UI.Models;
 using Microsoft.Win32;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
@@ -10,7 +13,6 @@ using System.Linq;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Media;
 
 namespace Diffraction_Monte_Carlo_Integration.UI.ViewModels
 {
@@ -68,14 +70,23 @@ namespace Diffraction_Monte_Carlo_Integration.UI.ViewModels
             }
 
             var saveFileDialog = new SaveFileDialog {
-                Filter = "DAT File|*.dat",
-                FileName = "diffraction.dat",
+                Filter = "DAT File|*.dat|PNG File|*.png",
+                FileName = "diffraction",
             };
 
             if (saveFileDialog.ShowDialog() != true) return;
 
             await using var stream = File.Open(saveFileDialog.FileName, FileMode.Create, FileAccess.Write);
-            await BuildFinalImageAsync(stream, wavelengthBuffer, irradianceBuffer, token);
+
+            switch (saveFileDialog.FilterIndex) {
+                case 2:
+                    var previewImage = BuildPreviewImage(wavelengthBuffer, irradianceBuffer);
+                    await previewImage.SaveAsPngAsync(stream, token);
+                    break;
+                default:
+                    await BuildFinalImageAsync(stream, wavelengthBuffer, irradianceBuffer, token);
+                    break;
+            }
         }
 
         public void Cancel()
@@ -86,10 +97,34 @@ namespace Diffraction_Monte_Carlo_Integration.UI.ViewModels
             tokenSource?.Cancel();
         }
 
-        private ImageSource BuildPreviewImage(IReadOnlyList<float> wavelengthBuffer, IReadOnlyList<float> irradianceBuffer)
+        private Image BuildPreviewImage(IReadOnlyList<float> wavelengthBuffer, IReadOnlyList<float> irradianceBuffer)
         {
-            // TODO
-            return null;
+            var image = new Image<Rgb48>(Configuration.Default, Model.TextureSize, Model.TextureSize);
+
+            try {
+                image.Mutate(context => {
+                    context.ProcessPixelRowsAsVector4((row, pos) => {
+                        for (var x = 0; x < Model.TextureSize; x++) {
+                            var pixel = Vector3.Zero;
+
+                            for (var w = 0; w < Model.WavelengthCount; w++) {
+                                var irradianceIndex = x + pos.Y * Model.TextureSize + w * (Model.TextureSize * Model.TextureSize);
+                                pixel += Spectral.SpectrumToRGB(irradianceBuffer[irradianceIndex] * 1e8f, wavelengthBuffer[w]);
+                            }
+
+                            row[x].X = pixel.X / Model.WavelengthCount;
+                            row[x].Y = pixel.Y / Model.WavelengthCount;
+                            row[x].Z = pixel.Z / Model.WavelengthCount;
+                        }
+                    });
+                });
+
+                return image;
+            }
+            catch {
+                image.Dispose();
+                throw;
+            }
         }
 
         private async Task BuildFinalImageAsync(Stream stream, IReadOnlyList<float> wavelengthBuffer, IReadOnlyList<float> irradianceBuffer, CancellationToken token)
