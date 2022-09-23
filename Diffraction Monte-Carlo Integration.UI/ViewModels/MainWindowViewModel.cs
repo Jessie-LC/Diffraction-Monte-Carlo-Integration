@@ -60,7 +60,7 @@ internal class MainWindowViewModel : IDisposable
                     while ((w = Interlocked.Increment(ref wavelengthIndex)) < Model.WavelengthCount) {
                         tokenSource.Token.ThrowIfCancellationRequested();
 
-                        DMCIWrapper.ComputeDiffractionImageExport(ii, Model.WavelengthCount, Model.SquareScale, Model.TextureSize, w, Model.Quality, Model.Radius, Model.Scale, Model.Distance, imageData.Irradiance, imageData.Wavelength);
+                        DMCIWrapper.ComputeDiffractionImageExport(ii, Model.WavelengthCount, Model.SquareScale, Model.TextureSize, Model.BladeCount, w, Model.Quality, Model.Radius, Model.Scale, Model.Distance, imageData.Irradiance, imageData.Wavelength);
 
                         OnSpectralImageDataUpdated(imageData);
                     }

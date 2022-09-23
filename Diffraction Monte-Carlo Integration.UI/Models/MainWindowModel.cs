@@ -38,6 +38,7 @@ public class MainWindowModel : INotifyPropertyChanged
     public float Radius {get; set;}
     public float Scale {get; set;}
     public float Distance {get; set;}
+    public int BladeCount {get; set;}
 
     private ImageSource _previewImage;
     public ImageSource PreviewImage {
@@ -59,6 +60,7 @@ public class MainWindowModel : INotifyPropertyChanged
         Radius = 2.0f;
         Scale = 10.0f;
         Distance = 10.0f;
+        BladeCount = 3;
     }
 
     protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
