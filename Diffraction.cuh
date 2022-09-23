@@ -6,6 +6,7 @@
 #include <chrono>
 #include <fstream>
 #include <cstddef>
+#include <thread>
 
 #include "glm/glm.hpp"
 
