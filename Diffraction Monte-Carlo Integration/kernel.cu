@@ -543,7 +543,7 @@ extern "C" {
 }
 
 int main() {
-    const int wavlengthCount = 30;
+    const int wavelengthCount = 30;
     int size = 256;
     bool squareScale = false;
     float radius = 4.0f;
@@ -556,7 +556,7 @@ int main() {
 
     std::thread t1[wavelengthCount];
     for (int i = 0; i < wavelengthCount; ++i) {
-        t1[i] = std::thread(ComputeDiffractionImageAtomic, wavlengthCount, squareScale, size, quality, radius, scale, dist, Irradiance, Wavelength);
+        t1[i] = std::thread(ComputeDiffractionImageAtomic, wavelengthCount, squareScale, size, quality, radius, scale, dist, Irradiance, Wavelength);
     }
     for (int i = 0; i < wavelengthCount; ++i) {
         t1[i].join();
