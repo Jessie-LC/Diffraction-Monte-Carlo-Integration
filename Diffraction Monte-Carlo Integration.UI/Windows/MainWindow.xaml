@@ -49,34 +49,41 @@
                                           DisplayMemberPath="Text" SelectedValuePath="Value"
                                           mah:TextBoxHelper.Watermark="Texture Size (default: 256)"
                                           mah:TextBoxHelper.UseFloatingWatermark="True"
+                                          ToolTip="The size of the texture to build."
                                           ItemsSource="{StaticResource TextureSizeValues}"
                                           SelectedValue="{Binding Model.TextureSize, Mode=TwoWay}"/>
                                     <StackPanel Orientation="Vertical" Margin="24,8">
                                         <TextBlock Margin="1" Foreground="{DynamicResource MahApps.Brushes.Gray5}"
                                                    Text="{Binding Model.QualityLabel, Mode=OneWay}"/>
                                         <Slider Minimum="0.1" Maximum="10.0"
+                                                ToolTip="Multiplies step count by specified value."
                                                 Style="{DynamicResource MahApps.Styles.Slider.Flat}"
                                                 Value="{Binding Model.Quality, Mode=TwoWay}"/>
                                     </StackPanel>
                                     <TextBox Margin="16,8" BorderThickness="0"
                                          mah:TextBoxHelper.Watermark="Radius (default: 2.0)"
                                          mah:TextBoxHelper.UseFloatingWatermark="True"
+                                         ToolTip="The radius of the opening."
                                          Text="{Binding Model.Radius, Mode=TwoWay, Converter={StaticResource NullableConverter}, ValidatesOnExceptions=True}"/>
                                     <TextBox Margin="16,8" BorderThickness="0"
                                          mah:TextBoxHelper.Watermark="Scale (default: 10.0)"
                                          mah:TextBoxHelper.UseFloatingWatermark="True"
+                                         ToolTip="The scale of the simulation domain."
                                          Text="{Binding Model.Scale, Mode=TwoWay, Converter={StaticResource NullableConverter}, ValidatesOnExceptions=True}"/>
                                     <TextBox Margin="16,8" BorderThickness="0"
                                          mah:TextBoxHelper.Watermark="Distance (default: 10.0)"
                                          mah:TextBoxHelper.UseFloatingWatermark="True"
+                                         ToolTip="The distance from opening to receiver plane."
                                          Text="{Binding Model.Distance, Mode=TwoWay, Converter={StaticResource NullableConverter}, ValidatesOnExceptions=True}"/>
                                     <TextBox Margin="16,8" BorderThickness="0"
                                          mah:TextBoxHelper.Watermark="Wavelength Count (default: 30)"
                                          mah:TextBoxHelper.UseFloatingWatermark="True"
+                                         ToolTip="The number of wavelengths."
                                          Text="{Binding Model.WavelengthCount, Mode=TwoWay, Converter={StaticResource NullableConverter}, ValidatesOnExceptions=True}"/>
                                     <TextBox Margin="16,8" BorderThickness="0"
                                          mah:TextBoxHelper.Watermark="Blade Count (default: 3)"
                                          mah:TextBoxHelper.UseFloatingWatermark="True"
+                                         ToolTip="The number of blades used for the opening."
                                          Text="{Binding Model.BladeCount, Mode=TwoWay, Converter={StaticResource NullableConverter}, ValidatesOnExceptions=True}"/>
                                     <!--<CheckBox HorizontalAlignment="Center" FontSize="14" Margin="8"
                                           IsChecked="{Binding Model.SquareScale, Mode=TwoWay}"
