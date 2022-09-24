@@ -1,15 +1,29 @@
 ﻿using Diffraction_Monte_Carlo_Integration.UI.Internal;
 using Diffraction_Monte_Carlo_Integration.UI.ViewModels;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System;
 using System.Windows;
 
 namespace Diffraction_Monte_Carlo_Integration.UI.Windows;
 
-public partial class MainWindow
+public partial class MainWindow : IDisposable
 {
+    private readonly object _imageLock;
+    private Image<Rgb24> previewImage;
+
+
     public MainWindow()
     {
+        _imageLock = new object();
+
         InitializeComponent();
+    }
+
+    public void Dispose()
+    {
+        previewImage?.Dispose();
+        ViewModel?.Dispose();
     }
 
     private async void RunButton_OnClick(object sender, RoutedEventArgs e)
@@ -22,13 +36,17 @@ public partial class MainWindow
         ViewModel.Cancel();
     }
 
-    private void OnSpectralImageDataUpdated(object sender, SpectralImageDataEventArgs e)
+    private async void OnPreviewImageUpdated(object sender, ImageDataEventArgs e)
     {
-        var previewImage = ImageBuilder.BuildPreviewImage(e.ImageData);
+        await Dispatcher.BeginInvoke(() => {
+            lock (_imageLock) {
+                previewImage?.Dispose();
+                previewImage = e.Image;
+            }
 
-        Dispatcher.BeginInvoke(() => {
-            var previewImageSource = new ImageSharpSource<Rgb24>(previewImage);
+            var previewImageSource = new ImageSharpSource<Rgb24>(e.Image);
             previewImageSource.Freeze();
+
             ViewModel.Model.PreviewImage = previewImageSource;
         });
     }

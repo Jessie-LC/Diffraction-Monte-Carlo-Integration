@@ -10,6 +10,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Controls\**" />
+    <EmbeddedResource Remove="Controls\**" />
+    <None Remove="Controls\**" />
+    <Page Remove="Controls\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Diffraction Monte-Carlo Integration\Diffraction Monte-Carlo Integration.vcxproj">
       <OutputItemType>Content</OutputItemType>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

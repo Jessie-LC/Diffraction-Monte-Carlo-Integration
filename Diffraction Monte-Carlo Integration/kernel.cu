@@ -549,7 +549,7 @@ int ComputeDiffractionImage(int threadIDX, int wavelengthCount, bool squareScale
 
     cudaMemcpy(hostCopyArrays[threadIDX], diffractionArrays[threadIDX], diffraction_size_bytes, cudaMemcpyDeviceToHost);
 
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
 
     Wavelength[wavelengthIndex] = (441.0f * (float(wavelengthIndex) / (wavelengthCount - 1))) + 390.0f;
 

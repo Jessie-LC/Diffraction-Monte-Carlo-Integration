@@ -2,7 +2,7 @@
 
 namespace Diffraction_Monte_Carlo_Integration.UI.Internal;
 
-internal class SpectralImageData
+public class SpectralImageData
 {
     public readonly int Size;
     public readonly int WavelengthCount;

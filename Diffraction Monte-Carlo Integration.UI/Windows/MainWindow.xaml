@@ -13,7 +13,7 @@
         <viewData:TextureSizeValues x:Key="TextureSizeValues"/>
     </Window.Resources>
     <Window.DataContext>
-        <viewModels:MainWindowViewModel x:Name="ViewModel" SpectralImageDataUpdated="OnSpectralImageDataUpdated"/>
+        <viewModels:MainWindowViewModel x:Name="ViewModel" PreviewImageUpdated="OnPreviewImageUpdated"/>
     </Window.DataContext>
     <DockPanel>
         <Border DockPanel.Dock="Bottom" Background="{StaticResource MahApps.Brushes.Highlight}">

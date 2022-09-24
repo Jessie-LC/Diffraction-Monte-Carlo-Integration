@@ -2,6 +2,7 @@
 using Diffraction_Monte_Carlo_Integration.UI.Models;
 using Microsoft.Win32;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -10,16 +11,24 @@ using System.Threading.Tasks;
 
 namespace Diffraction_Monte_Carlo_Integration.UI.ViewModels;
 
-internal class SpectralImageDataEventArgs : EventArgs
+internal class ImageDataEventArgs : EventArgs
 {
-    public SpectralImageData ImageData;
+    public readonly Image<Rgb24> Image;
+
+
+    public ImageDataEventArgs(Image<Rgb24> image)
+    {
+        Image = image;
+    }
 }
 
 internal class MainWindowViewModel : IDisposable
 {
-    public event EventHandler<SpectralImageDataEventArgs> SpectralImageDataUpdated;
+    public event EventHandler<ImageDataEventArgs> PreviewImageUpdated;
 
-    private CancellationTokenSource tokenSource;
+    private readonly object _imageDataLock;
+    private CancellationTokenSource buildTokenSource;
+    private Task currentPreviewTask;
 
     public MainWindowModel Model {get; set;}
 
@@ -27,11 +36,12 @@ internal class MainWindowViewModel : IDisposable
     public MainWindowViewModel()
     {
         Model = new MainWindowModel();
+        _imageDataLock = new object();
     }
 
     public void Dispose()
     {
-        tokenSource?.Dispose();
+        buildTokenSource?.Dispose();
     }
 
     public async Task RunAsync(CancellationToken token = default)
@@ -40,8 +50,8 @@ internal class MainWindowViewModel : IDisposable
         Model.OutputMessage = null;
         Model.PreviewImage = null;
 
-        tokenSource?.Dispose();
-        tokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
+        buildTokenSource?.Dispose();
+        buildTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
 
         var timer = Stopwatch.StartNew();
 
@@ -54,20 +64,36 @@ internal class MainWindowViewModel : IDisposable
             var taskList = new Task[Model.MaxThreadCount];
 
             for (var i = 0; i < Model.MaxThreadCount; i++) {
-                var ii = i;
+                var taskIndex = i;
                 taskList[i] = Task.Run(() => {
                     int w;
                     while ((w = Interlocked.Increment(ref wavelengthIndex)) < Model.WavelengthCount) {
-                        tokenSource.Token.ThrowIfCancellationRequested();
+                        buildTokenSource.Token.ThrowIfCancellationRequested();
 
-                        DMCIWrapper.ComputeDiffractionImageExport(ii, Model.WavelengthCount, Model.SquareScale, Model.TextureSize, Model.BladeCount, w, Model.Quality, Model.Radius, Model.Scale, Model.Distance, imageData.Irradiance, imageData.Wavelength);
+                        DMCIWrapper.ComputeDiffractionImageExport(taskIndex, Model.WavelengthCount, Model.SquareScale, Model.TextureSize, Model.BladeCount, w, Model.Quality, Model.Radius, Model.Scale, Model.Distance, imageData.Irradiance, imageData.Wavelength);
 
-                        OnSpectralImageDataUpdated(imageData);
+                        if (currentPreviewTask is { IsCompleted: false }) continue;
+
+                        SpectralImageData snapshot;
+                        lock (_imageDataLock) snapshot = imageData.CreateSnapshot();
+
+                        currentPreviewTask = Task.Run(() => {
+                            var newImage = ImageBuilder.BuildPreviewImage(snapshot);
+                            OnPreviewImageUpdated(newImage);
+                        }, buildTokenSource.Token);
                     }
-                }, tokenSource.Token);
+                }, buildTokenSource.Token);
             }
 
             await Task.WhenAll(taskList);
+
+            if (currentPreviewTask is { IsCompleted: false })
+                await currentPreviewTask;
+
+            await Task.Run(() => {
+                var newImage = ImageBuilder.BuildPreviewImage(imageData);
+                OnPreviewImageUpdated(newImage);
+            }, buildTokenSource.Token);
 
             Model.OutputMessage = $"Duration: {timer.Elapsed:g}";
         }
@@ -105,13 +131,11 @@ internal class MainWindowViewModel : IDisposable
         if (!Model.IsRunning) return;
 
         Model.OutputMessage = "Cancelling...";
-        tokenSource?.Cancel();
+        buildTokenSource?.Cancel();
     }
 
-    protected virtual void OnSpectralImageDataUpdated(SpectralImageData imageData)
+    protected virtual void OnPreviewImageUpdated(Image<Rgb24> image)
     {
-        SpectralImageDataUpdated?.Invoke(this, new SpectralImageDataEventArgs {
-            ImageData = imageData.CreateSnapshot(),
-        });
+        PreviewImageUpdated?.Invoke(this, new ImageDataEventArgs(image));
     }
 }
