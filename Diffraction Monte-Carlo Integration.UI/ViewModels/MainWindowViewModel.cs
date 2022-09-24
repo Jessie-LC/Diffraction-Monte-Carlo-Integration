@@ -40,6 +40,7 @@ internal class MainWindowViewModel : IDisposable
         Model.IsRunning = true;
         Model.OutputMessage = null;
         Model.PreviewImageSource = null;
+        Model.BuildProgress = 0;
 
         Model.PreviewImage?.Dispose();
         Model.PreviewImage = null;
@@ -63,7 +64,7 @@ internal class MainWindowViewModel : IDisposable
 
             for (var i = 0; i < maxThreadCount; i++) {
                 var taskIndex = i;
-                taskList[i] = Task.Factory.StartNew(() => {
+                taskList[i] = Task.Run(() => {
                     int w;
                     while ((w = Interlocked.Increment(ref wavelengthIndex)) < wavelengthCount) {
                         buildTokenSource.Token.ThrowIfCancellationRequested();

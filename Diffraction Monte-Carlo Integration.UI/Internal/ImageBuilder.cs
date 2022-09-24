@@ -4,6 +4,7 @@ using SixLabors.ImageSharp.Processing;
 using System;
 using System.Buffers.Binary;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,25 +17,23 @@ internal static class ImageBuilder
     {
         var image = new Image<Rgb24>(Configuration.Default, imageData.Size, imageData.Size);
 
+        var wavelengthList = imageData.Wavelength.Where(w => w > float.Epsilon).ToArray();
+
         try {
             image.Mutate(context => {
                 context.ProcessPixelRowsAsVector4((row, pos) => {
                     Vector3 pixel, pixelWavelengthResult;
-                    int x, w, finalWavelengthCount, irradianceIndex;
+                    int x, w, irradianceIndex;
                     for (x = 0; x < imageData.Size; x++) {
                         pixel = Vector3.Zero;
 
-                        finalWavelengthCount = 0;
-                        for (w = 0; w < imageData.WavelengthCount; w++) {
-                            if (imageData.Wavelength[w] <= float.Epsilon) continue;
-
+                        for (w = 0; w < wavelengthList.Length; w++) {
                             irradianceIndex = x + pos.Y * imageData.Size + w * (imageData.Size * imageData.Size);
-                            Spectral.SpectrumToRGB(imageData.Irradiance[irradianceIndex], imageData.Wavelength[w], out pixelWavelengthResult);
+                            Spectral.SpectrumToRGB(in imageData.Irradiance[irradianceIndex], in wavelengthList[w], out pixelWavelengthResult);
                             pixel += pixelWavelengthResult;
-                            finalWavelengthCount++;
                         }
 
-                        pixel /= finalWavelengthCount;
+                        pixel /= wavelengthList.Length;
 
                         row[x].X = pixel.X;
                         row[x].Y = pixel.Y;

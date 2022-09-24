@@ -10,7 +10,6 @@ namespace Diffraction_Monte_Carlo_Integration.UI.Windows;
 public partial class MainWindow : IDisposable
 {
     private readonly object _imageLock;
-    //private Image<Rgb24> previewImage;
 
 
     public MainWindow()
