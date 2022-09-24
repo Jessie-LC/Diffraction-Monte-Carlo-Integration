@@ -4,6 +4,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace Diffraction_Monte_Carlo_Integration.UI.Windows;
 
@@ -34,6 +35,11 @@ public partial class MainWindow : IDisposable
     private void CancelButton_OnClick(object sender, RoutedEventArgs e)
     {
         ViewModel.Cancel();
+    }
+
+    private void OnBuildProgressChanged(object sender, BuildProgressEventArgs e)
+    {
+        Dispatcher.Invoke(() => ViewModel.Model.BuildProgress = e.Progress);
     }
 
     private async void OnPreviewImageUpdated(object sender, ImageDataEventArgs e)

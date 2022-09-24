@@ -13,7 +13,7 @@
         <viewData:TextureSizeValues x:Key="TextureSizeValues"/>
     </Window.Resources>
     <Window.DataContext>
-        <viewModels:MainWindowViewModel x:Name="ViewModel" PreviewImageUpdated="OnPreviewImageUpdated"/>
+        <viewModels:MainWindowViewModel x:Name="ViewModel" BuildProgressChanged="OnBuildProgressChanged" PreviewImageUpdated="OnPreviewImageUpdated"/>
     </Window.DataContext>
     <DockPanel>
         <Border DockPanel.Dock="Bottom" Background="{StaticResource MahApps.Brushes.Highlight}">
@@ -32,10 +32,16 @@
                         <iconPacks:PackIconFontAwesome Kind="StopSolid" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-                <TextBlock Margin="8" FontSize="14" FontWeight="Medium"
-                           HorizontalAlignment="Left" VerticalAlignment="Center"
-                           Foreground="{DynamicResource MahApps.Brushes.Gray9}"
-                           Text="{Binding Model.OutputMessage, Mode=OneWay}"/>
+                <Grid>
+                    <ProgressBar Minimum="0" MaxHeight="12" Margin="8,4" VerticalAlignment="Center"
+                                 Maximum="{Binding Model.WavelengthCount, Mode=OneWay}"
+                                 Value="{Binding Model.BuildProgress, Mode=OneWay}"
+                                 Visibility="{Binding Model.IsRunning, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    <TextBlock Margin="8" FontSize="14" FontWeight="Medium"
+                               HorizontalAlignment="Left" VerticalAlignment="Center"
+                               Foreground="{DynamicResource MahApps.Brushes.Gray9}"
+                               Text="{Binding Model.OutputMessage, Mode=OneWay}"/>
+                </Grid>
             </DockPanel>
         </Border>
         <Grid>

@@ -11,19 +11,9 @@ using System.Threading.Tasks;
 
 namespace Diffraction_Monte_Carlo_Integration.UI.ViewModels;
 
-internal class ImageDataEventArgs : EventArgs
-{
-    public readonly Image<Rgb24> Image;
-
-
-    public ImageDataEventArgs(Image<Rgb24> image)
-    {
-        Image = image;
-    }
-}
-
 internal class MainWindowViewModel : IDisposable
 {
+    public event EventHandler<BuildProgressEventArgs> BuildProgressChanged;
     public event EventHandler<ImageDataEventArgs> PreviewImageUpdated;
 
     private readonly object _imageDataLock;
@@ -60,6 +50,7 @@ internal class MainWindowViewModel : IDisposable
         try {
             DMCIWrapper.AllocateMemory(Model.MaxThreadCount, Model.TextureSize);
 
+            var progressIndex = 0;
             var wavelengthIndex = -1;
             var taskList = new Task[Model.MaxThreadCount];
 
@@ -71,6 +62,9 @@ internal class MainWindowViewModel : IDisposable
                         buildTokenSource.Token.ThrowIfCancellationRequested();
 
                         DMCIWrapper.ComputeDiffractionImageExport(taskIndex, Model.WavelengthCount, Model.SquareScale, Model.TextureSize, Model.BladeCount, w, Model.Quality, Model.Radius, Model.Scale, Model.Distance, imageData.Irradiance, imageData.Wavelength);
+
+                        var progress = Interlocked.Increment(ref progressIndex);
+                        OnBuildProgressChanged(progress);
 
                         if (currentPreviewTask is { IsCompleted: false }) continue;
 
@@ -134,8 +128,35 @@ internal class MainWindowViewModel : IDisposable
         buildTokenSource?.Cancel();
     }
 
+    protected virtual void OnBuildProgressChanged(in int progress)
+    {
+        BuildProgressChanged?.Invoke(this, new BuildProgressEventArgs(progress));
+    }
+
     protected virtual void OnPreviewImageUpdated(Image<Rgb24> image)
     {
         PreviewImageUpdated?.Invoke(this, new ImageDataEventArgs(image));
+    }
+}
+
+internal class BuildProgressEventArgs : EventArgs
+{
+    public readonly int Progress;
+
+
+    public BuildProgressEventArgs(in int progress)
+    {
+        Progress = progress;
+    }
+}
+
+internal class ImageDataEventArgs : EventArgs
+{
+    public readonly Image<Rgb24> Image;
+
+
+    public ImageDataEventArgs(Image<Rgb24> image)
+    {
+        Image = image;
     }
 }

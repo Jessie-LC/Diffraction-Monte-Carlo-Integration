@@ -30,8 +30,33 @@ public class MainWindowModel : INotifyPropertyChanged
         }
     }
 
-    public int MaxThreadCount {get; set;}
-    public int WavelengthCount {get; set;}
+    private int _buildProgress;
+    public int BuildProgress {
+        get => _buildProgress;
+        set {
+            _buildProgress = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private int _maxThreadCount;
+    public int MaxThreadCount {
+        get => _maxThreadCount;
+        set {
+            _maxThreadCount = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private int _wavelengthCount;
+    public int WavelengthCount {
+        get => _wavelengthCount;
+        set {
+            _wavelengthCount = value;
+            OnPropertyChanged();
+        }
+    }
+
     public bool SquareScale {get; set;}
     public int TextureSize {get; set;}
     public float Quality {get; set;}
