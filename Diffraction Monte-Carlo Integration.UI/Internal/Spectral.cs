@@ -5,11 +5,13 @@ namespace Diffraction_Monte_Carlo_Integration.UI.Internal;
 
 internal static class Spectral
 {
-    public static Vector3 SpectrumToXYZ(float spectrum, in float w) {
+    public static void SpectrumToXYZ(in float spectrum, in float w, out Vector3 result) {
         var n = w - 390f;
         var n0 = (int)n;
-        if (n0 is < 0 or >= 830 - 390)
-            return Vector3.Zero;
+        if (n0 is < 0 or >= 830 - 390) {
+            result = Vector3.Zero;
+            return;
+        }
 
         //var n0 = Math.Min(i - 1, (int)n);
         //var n1 = Math.Min(i - 1, n0 + 1);
@@ -18,18 +20,16 @@ internal static class Spectral
 
         var xyz = Vector3.Lerp(cie[n0], cie[n1], n % 1);
 
-        spectrum *= 683.0f / cie[(int)(2.99792458e17f / 540e12f) - 390].Y;
-
-        xyz *= new Vector3(spectrum, spectrum, spectrum);
+        xyz *= spectrum * 683.0f / cie[(int)(2.99792458e17f / 540e12f) - 390].Y;
 
         //Normalize the conversion
-        return xyz * 441f / 113.042f;
+        result = xyz * 441f / 113.042f;
     }
 
-    public static Vector3 SpectrumToRGB(in float spectrum, in float w)
+    public static void SpectrumToRGB(in float spectrum, in float w, out Vector3 result)
     {
-        var xyz = SpectrumToXYZ(spectrum, w);
-        return Vector3.Transform(xyz, xyzToRGBMatrix);
+        SpectrumToXYZ(in spectrum, in w, out var xyz);
+        result = Vector3.Transform(xyz, xyzToRGBMatrix);
     }
 
     private static readonly Matrix4x4 xyzToRGBMatrix = new(

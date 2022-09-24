@@ -1,17 +1,16 @@
 ﻿using Diffraction_Monte_Carlo_Integration.UI.Internal;
 using Diffraction_Monte_Carlo_Integration.UI.ViewModels;
-using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Windows;
-using System.Windows.Threading;
+using System.Windows.Input;
 
 namespace Diffraction_Monte_Carlo_Integration.UI.Windows;
 
 public partial class MainWindow : IDisposable
 {
     private readonly object _imageLock;
-    private Image<Rgb24> previewImage;
+    //private Image<Rgb24> previewImage;
 
 
     public MainWindow()
@@ -23,7 +22,6 @@ public partial class MainWindow : IDisposable
 
     public void Dispose()
     {
-        previewImage?.Dispose();
         ViewModel?.Dispose();
     }
 
@@ -46,14 +44,25 @@ public partial class MainWindow : IDisposable
     {
         await Dispatcher.BeginInvoke(() => {
             lock (_imageLock) {
-                previewImage?.Dispose();
-                previewImage = e.Image;
+                ViewModel.Model.PreviewImage?.Dispose();
+                ViewModel.Model.PreviewImage = e.Image;
             }
 
             var previewImageSource = new ImageSharpSource<Rgb24>(e.Image);
             previewImageSource.Freeze();
 
-            ViewModel.Model.PreviewImage = previewImageSource;
+            ViewModel.Model.PreviewImageSource = previewImageSource;
         });
+    }
+
+    private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        var isCtrl = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+        if (!isCtrl || e.Handled) return;
+        e.Handled = true;
+
+        var value = ViewModel.Model.Zoom;
+        value += e.Delta * value * 0.001f;
+        ViewModel.Model.Zoom = Math.Clamp(value, 0.01f, 100f);
     }
 }

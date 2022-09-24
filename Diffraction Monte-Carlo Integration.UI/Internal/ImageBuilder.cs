@@ -19,15 +19,18 @@ internal static class ImageBuilder
         try {
             image.Mutate(context => {
                 context.ProcessPixelRowsAsVector4((row, pos) => {
-                    for (var x = 0; x < imageData.Size; x++) {
-                        var pixel = Vector3.Zero;
+                    Vector3 pixel, pixelWavelengthResult;
+                    int x, w, finalWavelengthCount, irradianceIndex;
+                    for (x = 0; x < imageData.Size; x++) {
+                        pixel = Vector3.Zero;
 
-                        var finalWavelengthCount = 0;
-                        for (var w = 0; w < imageData.WavelengthCount; w++) {
+                        finalWavelengthCount = 0;
+                        for (w = 0; w < imageData.WavelengthCount; w++) {
                             if (imageData.Wavelength[w] <= float.Epsilon) continue;
 
-                            var irradianceIndex = x + pos.Y * imageData.Size + w * (imageData.Size * imageData.Size);
-                            pixel += Spectral.SpectrumToRGB(imageData.Irradiance[irradianceIndex], imageData.Wavelength[w]);
+                            irradianceIndex = x + pos.Y * imageData.Size + w * (imageData.Size * imageData.Size);
+                            Spectral.SpectrumToRGB(imageData.Irradiance[irradianceIndex], imageData.Wavelength[w], out pixelWavelengthResult);
+                            pixel += pixelWavelengthResult;
                             finalWavelengthCount++;
                         }
 
@@ -52,13 +55,16 @@ internal static class ImageBuilder
     {
         var buffer = new byte[12];
 
-        for (var y = 0; y < imageData.Size; y++) {
-            for (var x = 0; x < imageData.Size; x++) {
-                var pixel = Vector3.Zero;
+        int x, y, w, irradianceIndex;
+        Vector3 pixel, pixelWavelengthValue;
+        for (y = 0; y < imageData.Size; y++) {
+            for (x = 0; x < imageData.Size; x++) {
+                pixel = Vector3.Zero;
 
-                for (var w = 0; w < imageData.WavelengthCount; w++) {
-                    var index = x + y * imageData.Size + w * (imageData.Size * imageData.Size);
-                    pixel += Spectral.SpectrumToRGB(imageData.Irradiance[index], imageData.Wavelength[w]);
+                for (w = 0; w < imageData.WavelengthCount; w++) {
+                    irradianceIndex = x + y * imageData.Size + w * (imageData.Size * imageData.Size);
+                    Spectral.SpectrumToRGB(imageData.Irradiance[irradianceIndex], imageData.Wavelength[w], out pixelWavelengthValue);
+                    pixel += pixelWavelengthValue;
                 }
 
                 pixel /= imageData.WavelengthCount;

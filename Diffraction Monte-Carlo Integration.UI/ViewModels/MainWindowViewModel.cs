@@ -31,6 +31,7 @@ internal class MainWindowViewModel : IDisposable
 
     public void Dispose()
     {
+        Model.PreviewImage?.Dispose();
         buildTokenSource?.Dispose();
     }
 
@@ -38,6 +39,9 @@ internal class MainWindowViewModel : IDisposable
     {
         Model.IsRunning = true;
         Model.OutputMessage = null;
+        Model.PreviewImageSource = null;
+
+        Model.PreviewImage?.Dispose();
         Model.PreviewImage = null;
 
         buildTokenSource?.Dispose();
@@ -45,33 +49,42 @@ internal class MainWindowViewModel : IDisposable
 
         var timer = Stopwatch.StartNew();
 
-        var imageData = new SpectralImageData(Model.TextureSize, Model.WavelengthCount);
+        var maxThreadCount = Model.MaxThreadCount ?? MainWindowModel.MaxThreadCountDefault;
+        var textureSize = Model.TextureSize ?? 256;
+        var wavelengthCount = Model.WavelengthCount ?? 30;
+        var imageData = new SpectralImageData(textureSize, wavelengthCount);
 
         try {
-            DMCIWrapper.AllocateMemory(Model.MaxThreadCount, Model.TextureSize);
+            DMCIWrapper.AllocateMemory(maxThreadCount, textureSize);
 
             var progressIndex = 0;
             var wavelengthIndex = -1;
-            var taskList = new Task[Model.MaxThreadCount];
+            var taskList = new Task[maxThreadCount];
 
-            for (var i = 0; i < Model.MaxThreadCount; i++) {
+            for (var i = 0; i < maxThreadCount; i++) {
                 var taskIndex = i;
-                taskList[i] = Task.Run(() => {
+                taskList[i] = Task.Factory.StartNew(() => {
                     int w;
-                    while ((w = Interlocked.Increment(ref wavelengthIndex)) < Model.WavelengthCount) {
+                    while ((w = Interlocked.Increment(ref wavelengthIndex)) < wavelengthCount) {
                         buildTokenSource.Token.ThrowIfCancellationRequested();
 
-                        DMCIWrapper.ComputeDiffractionImageExport(taskIndex, Model.WavelengthCount, Model.SquareScale, Model.TextureSize, Model.BladeCount, w, Model.Quality, Model.Radius, Model.Scale, Model.Distance, imageData.Irradiance, imageData.Wavelength);
+                        var quality = Model.Quality ?? 1f;
+                        var radius = Model.Radius ?? 2f;
+                        var scale = Model.Scale ?? 10f;
+                        var distance = Model.Distance ?? 10f;
+                        var bladeCount = Model.BladeCount ?? 3;
+
+                        DMCIWrapper.ComputeDiffractionImageExport(taskIndex, wavelengthCount, Model.SquareScale, textureSize, bladeCount, w, quality, radius, scale, distance, imageData.Irradiance, imageData.Wavelength);
 
                         var progress = Interlocked.Increment(ref progressIndex);
                         OnBuildProgressChanged(progress);
 
                         if (currentPreviewTask is { IsCompleted: false }) continue;
 
-                        SpectralImageData snapshot;
-                        lock (_imageDataLock) snapshot = imageData.CreateSnapshot();
-
                         currentPreviewTask = Task.Run(() => {
+                            SpectralImageData snapshot;
+                            lock (_imageDataLock) snapshot = imageData.CreateSnapshot();
+
                             var newImage = ImageBuilder.BuildPreviewImage(snapshot);
                             OnPreviewImageUpdated(newImage);
                         }, buildTokenSource.Token);
@@ -96,7 +109,7 @@ internal class MainWindowViewModel : IDisposable
             return;
         }
         finally {
-            DMCIWrapper.ClearMemory(Model.MaxThreadCount);
+            DMCIWrapper.ClearMemory(maxThreadCount);
             Model.IsRunning = false;
         }
 
