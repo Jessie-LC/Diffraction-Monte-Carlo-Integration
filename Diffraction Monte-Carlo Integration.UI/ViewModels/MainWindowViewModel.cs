@@ -26,6 +26,8 @@ internal class MainWindowViewModel : IDisposable
     public MainWindowViewModel()
     {
         Model = new MainWindowModel();
+        Model.ExposureChanged += OnModelExposureChanged;
+
         _imageDataLock = new object();
     }
 
@@ -34,6 +36,8 @@ internal class MainWindowViewModel : IDisposable
         Model.PreviewImage?.Dispose();
         buildTokenSource?.Dispose();
     }
+
+    private SpectralImageData currentImageData;
 
     public async Task RunAsync(CancellationToken token = default)
     {
@@ -53,7 +57,7 @@ internal class MainWindowViewModel : IDisposable
         var maxThreadCount = Model.MaxThreadCount ?? MainWindowModel.MaxThreadCountDefault;
         var textureSize = Model.TextureSize ?? 256;
         var wavelengthCount = Model.WavelengthCount ?? 30;
-        var imageData = new SpectralImageData(textureSize, wavelengthCount);
+        currentImageData = new SpectralImageData(textureSize, wavelengthCount);
 
         try {
             DMCIWrapper.AllocateMemory(maxThreadCount, textureSize);
@@ -69,13 +73,12 @@ internal class MainWindowViewModel : IDisposable
                     while ((w = Interlocked.Increment(ref wavelengthIndex)) < wavelengthCount) {
                         buildTokenSource.Token.ThrowIfCancellationRequested();
 
-                        var quality = Model.Quality ?? 1f;
                         var radius = Model.Radius ?? 2f;
                         var scale = Model.Scale ?? 10f;
                         var distance = Model.Distance ?? 10f;
                         var bladeCount = Model.BladeCount ?? 3;
 
-                        DMCIWrapper.ComputeDiffractionImageExport(taskIndex, wavelengthCount, Model.SquareScale, textureSize, bladeCount, w, quality, radius, scale, distance, imageData.Irradiance, imageData.Wavelength);
+                        DMCIWrapper.ComputeDiffractionImageExport(taskIndex, wavelengthCount, Model.SquareScale, textureSize, bladeCount, w, Model.Quality, radius, scale, distance, currentImageData.Irradiance, currentImageData.Wavelength);
 
                         var progress = Interlocked.Increment(ref progressIndex);
                         OnBuildProgressChanged(progress);
@@ -84,9 +87,9 @@ internal class MainWindowViewModel : IDisposable
 
                         currentPreviewTask = Task.Run(() => {
                             SpectralImageData snapshot;
-                            lock (_imageDataLock) snapshot = imageData.CreateSnapshot();
+                            lock (_imageDataLock) snapshot = currentImageData.CreateSnapshot();
 
-                            var newImage = ImageBuilder.BuildPreviewImage(snapshot);
+                            var newImage = ImageBuilder.BuildPreviewImage(snapshot, (float?)Model.Exposure ?? 1f);
                             OnPreviewImageUpdated(newImage);
                         }, buildTokenSource.Token);
                     }
@@ -98,10 +101,7 @@ internal class MainWindowViewModel : IDisposable
             if (currentPreviewTask is { IsCompleted: false })
                 await currentPreviewTask;
 
-            await Task.Run(() => {
-                var newImage = ImageBuilder.BuildPreviewImage(imageData);
-                OnPreviewImageUpdated(newImage);
-            }, buildTokenSource.Token);
+            await RebuildPreviewImageAsync(currentImageData, buildTokenSource.Token);
 
             Model.OutputMessage = $"Duration: {timer.Elapsed:g}";
         }
@@ -125,11 +125,11 @@ internal class MainWindowViewModel : IDisposable
 
         switch (saveFileDialog.FilterIndex) {
             case 2:
-                var previewImage = ImageBuilder.BuildPreviewImage(imageData);
+                var previewImage = ImageBuilder.BuildPreviewImage(currentImageData);
                 await previewImage.SaveAsPngAsync(stream, token);
                 break;
             default:
-                await ImageBuilder.BuildRawImageAsync(stream, imageData, token);
+                await ImageBuilder.BuildRawImageAsync(stream, currentImageData, token);
                 break;
         }
     }
@@ -140,6 +140,21 @@ internal class MainWindowViewModel : IDisposable
 
         Model.OutputMessage = "Cancelling...";
         buildTokenSource?.Cancel();
+    }
+
+    public Task RebuildPreviewImageAsync(SpectralImageData imageData, CancellationToken token = default)
+    {
+        return Task.Run(() => {
+            var newImage = ImageBuilder.BuildPreviewImage(imageData, (float?)Model.Exposure ?? 1f);
+            OnPreviewImageUpdated(newImage);
+        }, token);
+    }
+
+    private async void OnModelExposureChanged(object sender, EventArgs e)
+    {
+        if (Model.IsRunning || currentImageData == null) return;
+
+        await RebuildPreviewImageAsync(currentImageData);
     }
 
     protected virtual void OnBuildProgressChanged(in int progress)

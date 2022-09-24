@@ -11,6 +11,7 @@ namespace Diffraction_Monte_Carlo_Integration.UI.Models;
 public class MainWindowModel : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler PropertyChanged;
+    public event EventHandler ExposureChanged;
 
     public static readonly int MaxThreadCountDefault;
 
@@ -21,7 +22,7 @@ public class MainWindowModel : INotifyPropertyChanged
     private int? _wavelengthCount;
     private int? _textureSize;
     private Image<Rgb24> _previewImage;
-    private float? _quality;
+    private float _quality;
     private float? _radius;
     private float? _scale;
     private float? _distance;
@@ -29,6 +30,7 @@ public class MainWindowModel : INotifyPropertyChanged
     private bool _squareScale;
     private ImageSource _previewImageSource;
     private double _zoom;
+    private double? _exposure;
 
     public bool IsRunning {
         get => _isRunning;
@@ -60,7 +62,7 @@ public class MainWindowModel : INotifyPropertyChanged
         set {
             if (value.HasValue) {
                 if (value.Value < 1) throw new ApplicationException("Max Thread Count must be greater than zero!");
-                if (value.Value > 99) throw new ApplicationException("Max Thread Count must be less than 100!");
+                if (value.Value > Environment.ProcessorCount*2) throw new ApplicationException($"Max Thread Count must be less than {Environment.ProcessorCount*2:N0}!");
             }
 
             _maxThreadCount = value;
@@ -99,16 +101,15 @@ public class MainWindowModel : INotifyPropertyChanged
         }
     }
 
-    public float? Quality {
+    public float Quality {
         get => _quality;
         set {
-            if (value.HasValue) {
-                if (value.Value < float.Epsilon) throw new ApplicationException("Quality must be greater than zero!");
-                if (value.Value > 100.0 - float.Epsilon) throw new ApplicationException("Quality must be less than 100!");
-            }
+            if (value < 0.1f) throw new ApplicationException("Quality must be greater than or equal to 0.1!");
+            if (value > 10f) throw new ApplicationException("Quality must be less than or equal to 10!");
 
             _quality = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(QualityLabel));
         }
     }
 
@@ -116,8 +117,8 @@ public class MainWindowModel : INotifyPropertyChanged
         get => _radius;
         set {
             if (value.HasValue) {
-                if (value.Value < float.Epsilon) throw new ApplicationException("Radius must be greater than zero!");
-                if (value.Value > 100.0 - float.Epsilon) throw new ApplicationException("Radius must be less than 100!");
+                if (value.Value < 1f) throw new ApplicationException("Radius must be greater than or equal to 1!");
+                if (value.Value > 100f) throw new ApplicationException("Radius must be less than or equal to 100!");
             }
 
             _radius = value;
@@ -129,8 +130,8 @@ public class MainWindowModel : INotifyPropertyChanged
         get => _scale;
         set {
             if (value.HasValue) {
-                if (value.Value < float.Epsilon) throw new ApplicationException("Scale must be greater than zero!");
-                if (value.Value > 100.0 - float.Epsilon) throw new ApplicationException("Scale must be less than 100!");
+                if (value.Value < 1f) throw new ApplicationException("Scale must be greater than or equal to 1!");
+                if (value.Value > 5_000f) throw new ApplicationException("Scale must be less than or equal to 5,000!");
             }
 
             _scale = value;
@@ -142,8 +143,8 @@ public class MainWindowModel : INotifyPropertyChanged
         get => _distance;
         set {
             if (value.HasValue) {
-                if (value.Value < float.Epsilon) throw new ApplicationException("Distance must be greater than zero!");
-                if (value.Value > 100.0 - float.Epsilon) throw new ApplicationException("Distance must be less than 100!");
+                if (value.Value < 1f) throw new ApplicationException("Distance must be greater than or equal to 1!");
+                if (value.Value > 10_000f) throw new ApplicationException("Distance must be less than or equal to 10,000!");
             }
 
             _distance = value;
@@ -155,8 +156,8 @@ public class MainWindowModel : INotifyPropertyChanged
         get => _bladeCount;
         set {
             if (value.HasValue) {
-                if (value.Value < 1) throw new ApplicationException("Blade Count must be greater than zero!");
-                if (value.Value > 99) throw new ApplicationException("Blade Count must be less than 100!");
+                if (value.Value < 3) throw new ApplicationException("Blade Count must be greater than or equal to 3!");
+                if (value.Value > 32) throw new ApplicationException("Blade Count must be less than or equal to 32!");
             }
 
             _bladeCount = value;
@@ -200,8 +201,19 @@ public class MainWindowModel : INotifyPropertyChanged
         }
     }
 
+    public double? Exposure {
+        get => _exposure;
+        set {
+            _exposure = value;
+            OnPropertyChanged();
+
+            OnExposureChanged();
+        }
+    }
+
     public bool IsReady => !_isRunning;
     public int ActualTextureSize => PreviewImage?.Width ?? _textureSize ?? 256;
+    public string QualityLabel => $"Quality: {Quality:N1}";
     public string MaxThreadCountLabel => $"Max Thread Count (default: {MaxThreadCountDefault})";
 
 
@@ -213,7 +225,13 @@ public class MainWindowModel : INotifyPropertyChanged
     public MainWindowModel()
     {
         SquareScale = false;
+        _quality = 1f;
         _zoom = 1d;
+    }
+
+    protected virtual void OnExposureChanged()
+    {
+        ExposureChanged?.Invoke(this, EventArgs.Empty);
     }
 
     protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)

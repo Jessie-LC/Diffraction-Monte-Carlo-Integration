@@ -13,7 +13,7 @@ namespace Diffraction_Monte_Carlo_Integration.UI.Internal;
 
 internal static class ImageBuilder
 {
-    public static Image<Rgb24> BuildPreviewImage(SpectralImageData imageData)
+    public static Image<Rgb24> BuildPreviewImage(SpectralImageData imageData, float exposure = 1f)
     {
         var image = new Image<Rgb24>(Configuration.Default, imageData.Size, imageData.Size);
 
@@ -34,6 +34,7 @@ internal static class ImageBuilder
                         }
 
                         pixel /= wavelengthList.Length;
+                        pixel *= exposure;
 
                         row[x].X = pixel.X;
                         row[x].Y = pixel.Y;
