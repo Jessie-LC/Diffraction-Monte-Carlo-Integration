@@ -83,9 +83,21 @@ __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, Diffractio
     float radius = settings.radius;
     float dist = settings.dist;
 
+    //ensure scaleWeight + radiusWeight + distanceWeight == 1.0.
+    float average = dot(
+        vec3(scale, radius, dist),
+        vec3(0.2, 0.4, 4)
+    );
+    float deviation = sqrt(
+        dot(
+            pow(vec3(scale, radius, dist) - average, vec3(2.0f)),
+            vec3(0.2, 0.4, 4)
+        )
+    );
+
     float wavelength = ((441.0f * (float(wavelengthIndex) / (settings.wavelengthCount - 1))) + 390.0f) * 1e-3f;
 
-    int steps = int((clamp(scale / 100.0f, 1.0f, scale) * pow(radius, 2.0f) * pow(dist, 2.0f)) * settings.quality);
+    int steps = int(deviation * settings.quality);
     thrust::complex<float> integral = thrust::complex<float>(0.0f, 0.0f);
     for (int i = 0; i < steps; ++i) {
         vec2 uv = scale * ((vec2(x, y) / vec2(settings.size, settings.size)) - 0.5f);
