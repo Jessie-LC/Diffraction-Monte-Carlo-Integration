@@ -40,7 +40,7 @@ __device__ mat2 Rotate(float a) {
     return mat2(m.y, -m.x, m.x, m.y);
 }
 
-__device__ vec2 BokehShape(RNG_State& rng, int bladeCount) {
+__device__ vec2 BokehShape(RNG_State& rng, int bladeCount, float radius) {
     const int blades = bladeCount;
 
     vec2 uv = RandNext2F(rng);
@@ -57,7 +57,15 @@ __device__ vec2 BokehShape(RNG_State& rng, int bladeCount) {
     axis = rot * vec2(cos(angle / 2.0), sin(angle / 2.0) * (uv.x * 2.0 - 1.0));
     axis *= 1.0 - pow(1.0 - sqrt(uv.y), 1.0);
 
-    return axis;
+    return axis * radius;
+}
+
+__device__ vec2 SampleCircle(RNG_State& rngState, float radius) {
+    vec2 rng = RandNext2F(rngState);
+    float r = radius * sqrt(rng.x);
+    float t = 2.0 * pi * rng.y;
+
+    return r * vec2(cos(t), sin(t));
 }
 
 __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, DiffractionSettings settings) {
@@ -81,7 +89,7 @@ __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, Diffractio
     thrust::complex<float> integral = thrust::complex<float>(0.0f, 0.0f);
     for (int i = 0; i < steps; ++i) {
         vec2 uv = scale * ((vec2(x, y) / vec2(settings.size, settings.size)) - 0.5f);
-        vec2 rngUV = BokehShape(rng, settings.bladeCount) * radius;
+        vec2 rngUV = BokehShape(rng, settings.bladeCount, radius);
 
         float k = 2.0f * pi / wavelength;
         float r = length(vec3(uv, dist) - vec3(rngUV, 0.0f));
