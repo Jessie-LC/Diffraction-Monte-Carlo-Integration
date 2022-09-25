@@ -34,10 +34,9 @@ __constant__ float tau = 6.28318;
 __constant__ float phi = 1.61803399;
 
 __device__ mat2 Rotate(float a) {
-    vec2 m;
-    m.x = sin(a);
-    m.y = cos(a);
-    return mat2(m.y, -m.x, m.x, m.y);
+    float s = sin(a);
+    float c = cos(a);
+    return mat2(c, -s, s, c);
 }
 
 __device__ vec2 BokehShape(RNG_State& rng, int bladeCount, float radius) {
@@ -68,6 +67,10 @@ __device__ vec2 SampleCircle(RNG_State& rngState, float radius) {
     return r * vec2(cos(t), sin(t));
 }
 
+__device__ float absSquared(thrust::complex<float> value) {
+    return value.real() * value.real() + value.imag() * value.imag();
+}
+
 __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, DiffractionSettings settings) {
     int globalThreadIndex = blockIdx.x * blockDim.x + threadIdx.x;
     int x = globalThreadIndex % settings.size;
@@ -86,27 +89,33 @@ __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, Diffractio
     //ensure scaleWeight + radiusWeight + distanceWeight == 1.0.
     float average = dot(
         vec3(scale, radius, dist),
-        vec3(0.2, 0.4, 4)
+        vec3(0.1, 0.45, 0.45f)
     );
     float deviation = sqrt(
         dot(
             pow(vec3(scale, radius, dist) - average, vec3(2.0f)),
-            vec3(0.2, 0.4, 4)
+            vec3(0.1, 0.45, 0.45f)
         )
     );
 
     float wavelength = ((441.0f * (float(wavelengthIndex) / (settings.wavelengthCount - 1))) + 390.0f) * 1e-3f;
+    float k = 2.0f * pi / wavelength;
 
-    int steps = int(deviation * settings.quality);
+    float angle = pi / float(settings.bladeCount);
+    float sinAngle = sin(angle);
+    float cosAngle = cos(angle);
+    float blades = float(settings.bladeCount);
+
+    int steps = int(deviation * (dot(vec3(scale, radius, dist), vec3(0.3f, 0.3f, 0.3f)) / 2.0f) * settings.quality);
     thrust::complex<float> integral = thrust::complex<float>(0.0f, 0.0f);
     for (int i = 0; i < steps; ++i) {
         vec2 uv = scale * ((vec2(x, y) / vec2(settings.size, settings.size)) - 0.5f);
-        vec2 rngUV = BokehShape(rng, settings.bladeCount, radius);
+        vec2 rngUV = BokehShape(rng, blades, radius);
 
-        float k = 2.0f * pi / wavelength;
-        float r = length(vec3(uv, dist) - vec3(rngUV, 0.0f));
+        float r = length(vec3(uv - rngUV, dist));
+        float rk = r * k;
 
-        thrust::complex<float> term = (thrust::exp(thrust::complex<float>(0.0f, 1.0f) * (r * k)) / r) * (dist / r);
+        thrust::complex<float> term = thrust::complex<float>(cos(rk), sin(rk)) * (dist / (r * r));
 
         if (isnan(term.real())) {
             term = thrust::complex<float>(0.0f, 0.0f);
@@ -121,10 +130,11 @@ __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, Diffractio
             term = thrust::complex<float>(0.0f, 1.0f);
         }
 
-        integral += term * (1.0f / steps);
+        integral += term;
     }
+    integral /= steps;
 
-    integral = (thrust::complex<float>(1.0f, 0.0f) / (thrust::complex<float>(0.0f, 1.0f) * wavelength)) * integral;
+    integral *= thrust::complex<float>(1.0f, -1.0f / wavelength);
 
-    diff[x + y * settings.size] = pow(abs(integral), 2.0f);
+    diff[x + y * settings.size] = absSquared(integral);
 }

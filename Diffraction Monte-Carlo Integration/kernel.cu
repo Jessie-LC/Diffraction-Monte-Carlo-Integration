@@ -496,6 +496,23 @@ float Plancks(float t, float lambda) {
 
 float** diffractionArrays;
 float** hostCopyArrays;
+cudaStream_t* stream;
+
+void CreateStreams(int streamCount) {
+    stream = (cudaStream_t*)malloc(streamCount * sizeof(cudaStream_t));
+
+    for (int i = 0; i < streamCount; ++i) {
+        cudaStreamCreate(&stream[i]);
+    }
+}
+
+void DestroyStreams(int streamCount) {
+    for (int i = 0; i < streamCount; ++i) {
+        cudaStreamDestroy(stream[i]);
+    }
+
+    free(stream);
+}
 
 void InitializeMemory(int threadCount, int size) {
     diffractionArrays = (float**)malloc(threadCount * sizeof(float*));
@@ -520,10 +537,6 @@ void FreeMemory(int threadCount) {
 }
 
 int ComputeDiffractionImage(int threadIDX, int wavelengthCount, bool squareScale, int size, int bladeCount, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
-    //cudaSetDevice(0);
-
-    //fprintf(stderr, "\b\b\b\b%3d%c", (int)(100 * wavelengthIndex / (wavelengthCount - 1)), '%');
-
     DiffractionSettings settings;
 
     settings.wavelengthCount = wavelengthCount;
@@ -536,20 +549,14 @@ int ComputeDiffractionImage(int threadIDX, int wavelengthCount, bool squareScale
 
     size_t diffraction_size_bytes = (size_t)(settings.size * settings.size) * sizeof(float);
 
-    //float* diffraction;
-
-    //cudaMallocManaged(&diffraction, diffraction_size_bytes);
-
     int threadsPerBlock = settings.size / 2;
     int numberOfBlocks = settings.size * settings.size / threadsPerBlock;
 
-    DiffractionIntegral << <numberOfBlocks, threadsPerBlock >> > (diffractionArrays[threadIDX], wavelengthIndex, settings);
+    DiffractionIntegral << <numberOfBlocks, threadsPerBlock, 0, stream[threadIDX] >> > (diffractionArrays[threadIDX], wavelengthIndex, settings);
 
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(stream[threadIDX]);
 
     cudaMemcpy(hostCopyArrays[threadIDX], diffractionArrays[threadIDX], diffraction_size_bytes, cudaMemcpyDeviceToHost);
-
-    //cudaDeviceSynchronize();
 
     Wavelength[wavelengthIndex] = (441.0f * (float(wavelengthIndex) / (wavelengthCount - 1))) + 390.0f;
 
@@ -575,6 +582,12 @@ extern "C" {
     __declspec(dllexport) int ComputeDiffractionImageExport(int threadIDX, int wavelengthCount, bool squareScale, int size, int bladeCount, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
         return ComputeDiffractionImage(threadIDX, wavelengthCount, squareScale, size, bladeCount, wavelengthIndex, quality, radius, scale, dist, Irradiance, Wavelength);
     }
+    __declspec(dllexport) void _CreateStreams(int streamCount) {
+        return CreateStreams(streamCount);
+    }
+    __declspec(dllexport) void _DestroyStreams(int streamCount) {
+        return DestroyStreams(streamCount);
+    }
     __declspec(dllexport) void AllocateMemory(int threadCount, int size) {
         return InitializeMemory(threadCount, size);
     }
@@ -587,10 +600,10 @@ int main() {
     const int wavelengthCount = 30;
     int size = 256;
     bool squareScale = false;
-    float radius = 4.0f;
-    float quality = 1.0f;
-    float scale = 500.0f;
-    float dist = 15.0f;
+    float radius = 2.0f;
+    float quality = 10.0f;
+    float scale = 10.0f;
+    float dist = 10.0f;
 
     float* Irradiance = (float*)malloc(int(size * size * wavelengthCount) * sizeof(float));
     float* Wavelength = (float*)malloc(int(wavelengthCount) * sizeof(float));
