@@ -25,7 +25,7 @@
             <DockPanel>
                 <Grid DockPanel.Dock="Bottom">
                     <ProgressBar Minimum="0" MaxHeight="12" Margin="8,4" VerticalAlignment="Center"
-                                 Maximum="{Binding Model.WavelengthCount, Mode=OneWay}"
+                                 Maximum="{Binding Model.WavelengthCount, Mode=OneWay, FallbackValue=30}"
                                  Value="{Binding Model.BuildProgress, Mode=OneWay}"
                                  Visibility="{Binding Model.IsRunning, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                     <TextBlock Margin="8" FontSize="14" FontWeight="Medium"
