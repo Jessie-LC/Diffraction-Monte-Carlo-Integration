@@ -55,11 +55,13 @@ internal class MainWindowViewModel : IDisposable
         var timer = Stopwatch.StartNew();
 
         var maxThreadCount = Model.MaxThreadCount ?? MainWindowModel.MaxThreadCountDefault;
+        var streamCount = 16;
         var textureSize = Model.TextureSize ?? 256;
         var wavelengthCount = Model.WavelengthCount ?? 30;
         currentImageData = new SpectralImageData(textureSize, wavelengthCount);
 
         try {
+            DMCIWrapper._CreateStreams(streamCount);
             DMCIWrapper.AllocateMemory(maxThreadCount, textureSize);
 
             var progressIndex = 0;
@@ -111,6 +113,7 @@ internal class MainWindowViewModel : IDisposable
         }
         finally {
             DMCIWrapper.ClearMemory(maxThreadCount);
+            DMCIWrapper._DestroyStreams(streamCount);
             Model.IsRunning = false;
         }
 

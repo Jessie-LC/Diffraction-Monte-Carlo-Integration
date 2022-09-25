@@ -8,6 +8,12 @@ internal class DMCIWrapper
     public static extern int ComputeDiffractionImageExport(int threadIDX, int wavelengthCount, bool squareScale, int size, int bladeCount, int wavelengthIndex, float quality, float radius, float scale, float dist, float[] Irradiance, float[] Wavelength);
 
     [DllImport(@"Diffraction Monte-Carlo Integration.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern void _CreateStreams(int streamCount);
+
+    [DllImport(@"Diffraction Monte-Carlo Integration.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern void _DestroyStreams(int streamCount);
+
+    [DllImport(@"Diffraction Monte-Carlo Integration.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern void AllocateMemory(int threadCount, int size);
 
     [DllImport(@"Diffraction Monte-Carlo Integration.dll", CallingConvention = CallingConvention.Cdecl)]
