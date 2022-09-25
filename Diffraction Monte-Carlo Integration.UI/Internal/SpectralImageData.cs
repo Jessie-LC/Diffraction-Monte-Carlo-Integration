@@ -31,14 +31,6 @@ public class SpectralImageData
         _finalColorLock = new object();
     }
 
-    private SpectralImageData(in SpectralImageData imageData)
-    {
-        Size = imageData.Size;
-        WavelengthCount = imageData.WavelengthCount;
-        Wavelength = (float[])imageData.Wavelength.Clone();
-        Irradiance = imageData.Irradiance;
-    }
-
     public void AppendFinalColorSlice(int wavelengthIndex)
     {
         var wavelengthOffset = wavelengthIndex * (Size * Size);
@@ -66,15 +58,5 @@ public class SpectralImageData
                 }
             });
         });
-    }
-
-    /// <summary>
-    /// Creates a copy of the current SpectralImageData using a copy of the wavelength buffer.
-    /// This allows the same irradiance buffer to continue being updated for additional wavelengths,
-    /// while providing a thread-safe way to read only the existing wavelength values.
-    /// </summary>
-    public SpectralImageData CreateSnapshot()
-    {
-        return new SpectralImageData(this);
     }
 }

@@ -19,6 +19,7 @@ public class MainWindowModel : INotifyPropertyChanged
     private string _outputMessage;
     private int _buildProgress;
     private int? _maxThreadCount;
+    private int? _streamCount;
     private int? _wavelengthCount;
     private int? _textureSize;
     private Image<Rgb24> _previewImage;
@@ -67,6 +68,21 @@ public class MainWindowModel : INotifyPropertyChanged
 
             _maxThreadCount = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(StreamCountLabel));
+        }
+    }
+
+    public int? StreamCount {
+        get => _streamCount;
+        set {
+            if (value.HasValue) {
+                if (value.Value < 1) throw new ApplicationException("Stream Count must be greater than zero!");
+                if (value.Value > 16) throw new ApplicationException("Stream Count must be less than or equal to 16!");
+            }
+
+            _streamCount = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(StreamCountLabel));
         }
     }
 
@@ -215,6 +231,7 @@ public class MainWindowModel : INotifyPropertyChanged
     public int ActualTextureSize => PreviewImage?.Width ?? _textureSize ?? 256;
     public string QualityLabel => $"Quality: {Quality:N1}";
     public string MaxThreadCountLabel => $"Max Thread Count (default: {MaxThreadCountDefault})";
+    public string StreamCountLabel => $"Stream Count (default: {Math.Min(_maxThreadCount ?? MaxThreadCountDefault, 16)})";
 
 
     static MainWindowModel()
