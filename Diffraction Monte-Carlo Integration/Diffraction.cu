@@ -106,7 +106,7 @@ __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, Diffractio
     float cosAngle = cos(angle);
     float blades = float(settings.bladeCount);
 
-    int steps = int(deviation * (dot(vec3(scale, radius, dist), vec3(0.3f, 0.3f, 0.3f)) / 2.0f) * settings.quality);
+    int steps = int(deviation * dot(vec3(scale, radius, dist), vec3(0.3f, 0.3f, 0.3f)) * settings.quality);
     thrust::complex<float> integral = thrust::complex<float>(0.0f, 0.0f);
     for (int i = 0; i < steps; ++i) {
         vec2 uv = scale * ((vec2(x, y) / vec2(settings.size, settings.size)) - 0.5f);
