@@ -1,6 +1,5 @@
 ﻿using Diffraction_Monte_Carlo_Integration.UI.Internal;
 using Diffraction_Monte_Carlo_Integration.UI.ViewModels;
-using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Threading.Tasks;
@@ -26,15 +25,12 @@ public partial class MainWindow : IDisposable
         ViewModel?.Dispose();
     }
 
-    private async Task UpdatePreviewImageAsync(Image<Rgb24> image)
+    private async Task UpdatePreviewImageAsync()
     {
         await Dispatcher.BeginInvoke(() => {
-            lock (_imageLock) {
-                ViewModel.Model.PreviewImage?.Dispose();
-                ViewModel.Model.PreviewImage = image;
-            }
+            ViewModel.UpdatePreviewImage();
 
-            var previewImageSource = new ImageSharpSource<Rgb24>(image);
+            var previewImageSource = new ImageSharpSource<Rgb24>(ViewModel.Model.PreviewImage);
             previewImageSource.Freeze();
 
             ViewModel.Model.PreviewImageSource = previewImageSource;
@@ -56,9 +52,9 @@ public partial class MainWindow : IDisposable
         Dispatcher.Invoke(() => ViewModel.Model.BuildProgress = e.Progress);
     }
 
-    private async void OnPreviewImageUpdated(object sender, ImageDataEventArgs e)
+    private async void OnPreviewImageUpdated(object sender, EventArgs e)
     {
-        await UpdatePreviewImageAsync(e.Image);
+        await UpdatePreviewImageAsync();
     }
 
     private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)

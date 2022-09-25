@@ -14,11 +14,12 @@ namespace Diffraction_Monte_Carlo_Integration.UI.ViewModels;
 internal class MainWindowViewModel : IDisposable
 {
     public event EventHandler<BuildProgressEventArgs> BuildProgressChanged;
-    public event EventHandler<ImageDataEventArgs> PreviewImageUpdated;
+    public event EventHandler PreviewImageUpdated;
 
-    private readonly object _imageDataLock;
+    //private readonly object _imageDataLock;
     private CancellationTokenSource buildTokenSource;
-    private Task currentPreviewTask;
+    private SpectralImageData currentImageData;
+    //private Task currentPreviewTask;
 
     public MainWindowModel Model {get; set;}
 
@@ -28,7 +29,7 @@ internal class MainWindowViewModel : IDisposable
         Model = new MainWindowModel();
         Model.ExposureChanged += OnModelExposureChanged;
 
-        _imageDataLock = new object();
+        //_imageDataLock = new object();
     }
 
     public void Dispose()
@@ -37,17 +38,12 @@ internal class MainWindowViewModel : IDisposable
         buildTokenSource?.Dispose();
     }
 
-    private SpectralImageData currentImageData;
-
     public async Task RunAsync(CancellationToken token = default)
     {
         Model.IsRunning = true;
         Model.OutputMessage = null;
         Model.PreviewImageSource = null;
         Model.BuildProgress = 0;
-
-        Model.PreviewImage?.Dispose();
-        Model.PreviewImage = null;
 
         buildTokenSource?.Dispose();
         buildTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -59,6 +55,9 @@ internal class MainWindowViewModel : IDisposable
         var textureSize = Model.TextureSize ?? 256;
         var wavelengthCount = Model.WavelengthCount ?? 30;
         currentImageData = new SpectralImageData(textureSize, wavelengthCount);
+
+        Model.PreviewImage?.Dispose();
+        Model.PreviewImage = new Image<Rgb24>(textureSize, textureSize);
 
         try {
             DMCIWrapper._CreateStreams(streamCount);
@@ -82,28 +81,32 @@ internal class MainWindowViewModel : IDisposable
 
                         DMCIWrapper.ComputeDiffractionImageExport(taskIndex, wavelengthCount, Model.SquareScale, textureSize, bladeCount, w, Model.Quality, radius, scale, distance, currentImageData.Irradiance, currentImageData.Wavelength);
 
+                        currentImageData.AppendFinalColorSlice(w);
+
                         var progress = Interlocked.Increment(ref progressIndex);
                         OnBuildProgressChanged(progress);
 
-                        if (currentPreviewTask is { IsCompleted: false }) continue;
+                        //if (currentPreviewTask is { IsCompleted: false }) continue;
 
-                        currentPreviewTask = Task.Run(() => {
-                            SpectralImageData snapshot;
-                            lock (_imageDataLock) snapshot = currentImageData.CreateSnapshot();
+                        //currentPreviewTask = Task.Run(() => {
+                        //    //SpectralImageData snapshot;
+                        //    //lock (_imageDataLock) snapshot = currentImageData.CreateSnapshot();
 
-                            var newImage = ImageBuilder.BuildPreviewImage(snapshot, (float?)Model.Exposure ?? 1f);
-                            OnPreviewImageUpdated(newImage);
-                        }, buildTokenSource.Token);
+                        //    var newImage = ImageBuilder.BuildPreviewImage(snapshot, (float?)Model.Exposure ?? 1f);
+                        //    OnPreviewImageUpdated(newImage);
+                        //}, buildTokenSource.Token);
+                        OnPreviewImageUpdated();
                     }
                 }, buildTokenSource.Token);
             }
 
             await Task.WhenAll(taskList);
 
-            if (currentPreviewTask is { IsCompleted: false })
-                await currentPreviewTask;
+            //if (currentPreviewTask is { IsCompleted: false })
+            //    await currentPreviewTask;
 
-            await RebuildPreviewImageAsync(currentImageData, buildTokenSource.Token);
+            //await RebuildPreviewImageAsync(currentImageData, buildTokenSource.Token);
+            OnPreviewImageUpdated();
 
             Model.OutputMessage = $"Duration: {timer.Elapsed:g}";
         }
@@ -128,8 +131,9 @@ internal class MainWindowViewModel : IDisposable
 
         switch (saveFileDialog.FilterIndex) {
             case 2:
-                var previewImage = ImageBuilder.BuildPreviewImage(currentImageData);
-                await previewImage.SaveAsPngAsync(stream, token);
+                //var previewImage = ImageBuilder.BuildPreviewImage(currentImageData);
+                currentImageData.PopulateFinalColorImage(Model.PreviewImage);
+                await Model.PreviewImage.SaveAsPngAsync(stream, token);
                 break;
             default:
                 await ImageBuilder.BuildRawImageAsync(stream, currentImageData, token);
@@ -145,19 +149,25 @@ internal class MainWindowViewModel : IDisposable
         buildTokenSource?.Cancel();
     }
 
-    public Task RebuildPreviewImageAsync(SpectralImageData imageData, CancellationToken token = default)
+    public void UpdatePreviewImage()
     {
-        return Task.Run(() => {
-            var newImage = ImageBuilder.BuildPreviewImage(imageData, (float?)Model.Exposure ?? 1f);
-            OnPreviewImageUpdated(newImage);
-        }, token);
+        currentImageData.PopulateFinalColorImage(Model.PreviewImage, (float?)Model.Exposure ?? 1f);
     }
 
-    private async void OnModelExposureChanged(object sender, EventArgs e)
+    //public Task RebuildPreviewImageAsync(SpectralImageData imageData, CancellationToken token = default)
+    //{
+    //    return Task.Run(() => {
+    //        var newImage = ImageBuilder.BuildPreviewImage(imageData, (float?)Model.Exposure ?? 1f);
+    //        OnPreviewImageUpdated(newImage);
+    //    }, token);
+    //}
+
+    private void OnModelExposureChanged(object sender, EventArgs e)
     {
         if (Model.IsRunning || currentImageData == null) return;
 
-        await RebuildPreviewImageAsync(currentImageData);
+        //await RebuildPreviewImageAsync(currentImageData);
+        OnPreviewImageUpdated();
     }
 
     protected virtual void OnBuildProgressChanged(in int progress)
@@ -165,9 +175,9 @@ internal class MainWindowViewModel : IDisposable
         BuildProgressChanged?.Invoke(this, new BuildProgressEventArgs(progress));
     }
 
-    protected virtual void OnPreviewImageUpdated(Image<Rgb24> image)
+    protected virtual void OnPreviewImageUpdated()
     {
-        PreviewImageUpdated?.Invoke(this, new ImageDataEventArgs(image));
+        PreviewImageUpdated?.Invoke(this, EventArgs.Empty);
     }
 }
 
