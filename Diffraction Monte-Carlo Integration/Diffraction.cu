@@ -89,12 +89,12 @@ __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, Diffractio
     //ensure scaleWeight + radiusWeight + distanceWeight == 1.0.
     float average = dot(
         vec3(scale, radius, dist),
-        vec3(0.2f, 0.4f, 0.4f)
+        vec3(0.1f, 0.3f, 0.6f)
     );
     float deviation = sqrt(
         dot(
             pow(vec3(scale, radius, dist) - average, vec3(2.0f)),
-            vec3(0.2f, 0.4f, 0.4f)
+            vec3(0.1f, 0.3f, 0.6f)
         )
     );
 
@@ -106,7 +106,7 @@ __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, Diffractio
     float cosAngle = cos(angle);
     float blades = float(settings.bladeCount);
 
-    int steps = int(deviation * dot(vec3(scale, radius, dist), vec3(0.3f, 0.3f, 0.3f)) * settings.quality);
+    int steps = int(scale * pow(radius, 2.0f) * pow(dist, 2.0f) * settings.quality);
     thrust::complex<float> integral = thrust::complex<float>(0.0f, 0.0f);
     for (int i = 0; i < steps; ++i) {
         vec2 uv = scale * ((vec2(x, y) / vec2(settings.size, settings.size)) - 0.5f);
