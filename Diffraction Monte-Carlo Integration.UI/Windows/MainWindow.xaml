@@ -12,6 +12,7 @@
         Background="Black"
         Width="800" Height="600" TitleCharacterCasing="Normal">
     <Window.Resources>
+        <viewData:PresetValues x:Key="PresetValues"/>
         <viewData:TextureSizeValues x:Key="TextureSizeValues"/>
         <converters:NullableConverter x:Key="NullableConverter"/>
     </Window.Resources>
@@ -130,6 +131,11 @@
                          mah:TextBoxHelper.Watermark="Exposure (default: 1.0)"
                          mah:TextBoxHelper.UseFloatingWatermark="True"
                          Text="{Binding Model.Exposure, Mode=TwoWay, Converter={StaticResource NullableConverter}}"/>
+                <ComboBox x:Name="presetDropDown" VerticalAlignment="Center" BorderThickness="0" Width="120" Margin="16,0,0,0"
+                          HorizontalContentAlignment="Center" DisplayMemberPath="Name" SelectionChanged="OnPresetSelectionChanged"
+                          mah:TextBoxHelper.Watermark="Preset"
+                          mah:TextBoxHelper.UseFloatingWatermark="True"
+                          ItemsSource="{StaticResource PresetValues}"/>
             </StackPanel>
         </Border>
         <ScrollViewer HorizontalScrollBarVisibility="Auto"

@@ -1,22 +1,19 @@
 ﻿using Diffraction_Monte_Carlo_Integration.UI.Internal;
+using Diffraction_Monte_Carlo_Integration.UI.ViewData;
 using Diffraction_Monte_Carlo_Integration.UI.ViewModels;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace Diffraction_Monte_Carlo_Integration.UI.Windows;
 
 public partial class MainWindow : IDisposable
 {
-    private readonly object _imageLock;
-
-
     public MainWindow()
     {
-        _imageLock = new object();
-
         InitializeComponent();
     }
 
@@ -66,5 +63,18 @@ public partial class MainWindow : IDisposable
         var value = ViewModel.Model.Zoom;
         value += e.Delta * value * 0.001f;
         ViewModel.Model.Zoom = Math.Clamp(value, 0.01f, 100f);
+    }
+
+    private void OnPresetSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var preset = (PresetValues.Item)presetDropDown.SelectedItem;
+        if (preset == null) return;
+
+        ViewModel.Model.WavelengthCount = preset.WavelengthCount;
+        ViewModel.Model.Quality = preset.Quality;
+        ViewModel.Model.Radius = preset.Radius;
+        ViewModel.Model.Scale = preset.Scale;
+        ViewModel.Model.Distance = preset.Distance;
+        ViewModel.Model.BladeCount = preset.BladeCount;
     }
 }
