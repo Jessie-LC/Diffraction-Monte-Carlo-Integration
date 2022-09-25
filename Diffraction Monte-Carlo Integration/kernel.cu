@@ -537,32 +537,34 @@ void FreeMemory(int threadCount) {
 }
 
 int ComputeDiffractionImage(int threadIDX, int wavelengthCount, bool squareScale, int size, int bladeCount, int wavelengthIndex, float quality, float radius, float scale, float dist, float* Irradiance, float* Wavelength) {
-    DiffractionSettings settings;
+    for (int i = 0; i < 16; ++i) {
+        DiffractionSettings settings;
 
-    settings.wavelengthCount = wavelengthCount;
-    settings.size = size;
-    settings.bladeCount = bladeCount;
-    settings.quality = quality;
-    settings.radius = radius;
-    settings.scale = scale;
-    settings.dist = dist;
+        settings.wavelengthCount = wavelengthCount;
+        settings.size = size;
+        settings.bladeCount = bladeCount;
+        settings.quality = quality;
+        settings.radius = radius;
+        settings.scale = scale;
+        settings.dist = dist;
 
-    size_t diffraction_size_bytes = (size_t)(settings.size * settings.size) * sizeof(float);
+        size_t diffraction_size_bytes = (size_t)(settings.size * settings.size) * sizeof(float);
 
-    int threadsPerBlock = settings.size / 2;
-    int numberOfBlocks = settings.size * settings.size / threadsPerBlock;
+        int threadsPerBlock = settings.size / 2;
+        int numberOfBlocks = settings.size * settings.size / threadsPerBlock;
 
-    DiffractionIntegral << <numberOfBlocks, threadsPerBlock, 0, stream[threadIDX] >> > (diffractionArrays[threadIDX], wavelengthIndex, settings);
+        DiffractionIntegral << <numberOfBlocks, threadsPerBlock, 0, stream[i] >> > (diffractionArrays[threadIDX], wavelengthIndex, settings);
 
-    cudaStreamSynchronize(stream[threadIDX]);
+        cudaStreamSynchronize(stream[i]);
 
-    cudaMemcpy(hostCopyArrays[threadIDX], diffractionArrays[threadIDX], diffraction_size_bytes, cudaMemcpyDeviceToHost);
+        cudaMemcpy(hostCopyArrays[threadIDX], diffractionArrays[threadIDX], diffraction_size_bytes, cudaMemcpyDeviceToHost);
 
-    Wavelength[wavelengthIndex] = (441.0f * (float(wavelengthIndex) / (wavelengthCount - 1))) + 390.0f;
+        Wavelength[wavelengthIndex] = (441.0f * (float(wavelengthIndex) / (wavelengthCount - 1))) + 390.0f;
 
-    for (int y = 0; y < settings.size; ++y) {
-        for (int x = 0; x < settings.size; ++x) {
-            Irradiance[x + y * settings.size + wavelengthIndex * (settings.size * settings.size)] = hostCopyArrays[threadIDX][x + y * settings.size];
+        for (int y = 0; y < settings.size; ++y) {
+            for (int x = 0; x < settings.size; ++x) {
+                Irradiance[x + y * settings.size + wavelengthIndex * (settings.size * settings.size)] = hostCopyArrays[threadIDX][x + y * settings.size];
+            }
         }
     }
 
