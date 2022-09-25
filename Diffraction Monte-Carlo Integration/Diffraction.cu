@@ -89,12 +89,12 @@ __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, Diffractio
     //ensure scaleWeight + radiusWeight + distanceWeight == 1.0.
     float average = dot(
         vec3(scale, radius, dist),
-        vec3(0.1, 0.45, 0.45f)
+        vec3(0.2f, 0.4f, 0.4f)
     );
     float deviation = sqrt(
         dot(
             pow(vec3(scale, radius, dist) - average, vec3(2.0f)),
-            vec3(0.1, 0.45, 0.45f)
+            vec3(0.2f, 0.4f, 0.4f)
         )
     );
 
