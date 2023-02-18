@@ -44,9 +44,9 @@ public partial class MainWindow : IDisposable
         ViewModel.Cancel();
     }
 
-    private void OnBuildProgressChanged(object sender, BuildProgressEventArgs e)
+    private async void OnBuildProgressChanged(object sender, BuildProgressEventArgs e)
     {
-        Dispatcher.Invoke(() => ViewModel.Model.BuildProgress = e.Progress);
+        await Dispatcher.BeginInvoke(() => ViewModel.Model.BuildProgress = e.Progress);
     }
 
     private async void OnPreviewImageUpdated(object sender, EventArgs e)
