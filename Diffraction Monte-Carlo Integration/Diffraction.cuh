@@ -24,3 +24,4 @@ struct DiffractionSettings {
 };
 
 __global__ void DiffractionIntegral(float* diff, int wavelength, DiffractionSettings settings);
+__global__ void ApertureImageCalculation(float* aperture, int wavelength, DiffractionSettings settings);

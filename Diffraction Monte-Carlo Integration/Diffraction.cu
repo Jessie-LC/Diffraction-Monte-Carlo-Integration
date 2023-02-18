@@ -71,6 +71,59 @@ __device__ float absSquared(thrust::complex<float> value) {
     return value.real() * value.real() + value.imag() * value.imag();
 }
 
+__device__ float Hypot(vec2 position, float dist) {
+    return sqrt(pow(position.x, 2.0) + pow(position.y, 2.0) + pow(dist, 2.0));
+}
+
+__device__ float Aperture(vec2 uv, float radius, int blades) {
+    float r = 0.0;
+    for (int i = 0; i < blades; ++i) {
+        float angle = 2.0 * pi * (float(i) / float(blades));
+
+        mat2 rot = Rotate(float(blades) * angle + radians(0.0));
+
+        vec2 axis = rot * vec2(cos(angle), sin(angle));
+
+        r = max(r, dot(axis, uv));
+    }
+
+    return float(r < (radius * 1e-6));
+}
+
+__device__ vec2 IndexToDistance(float i, float j, int N) {
+    float x = (float(i) - float(N / 2)) / (float(N));
+    float y = (float(N / 2) - float(j)) / (float(N));
+
+    return vec2(x, y);
+}
+__device__ vec2 IndexToDistance(int i, int j, int N) {
+    float x = (float(i) - float(N / 2)) / (float(N));
+    float y = (float(N / 2) - float(j)) / (float(N));
+
+    return vec2(x, y);
+}
+
+//#define NOT_AIRY
+
+__device__ float BesselJ(float x) {
+    float xx = x * x, a = 1. + .12138 * xx;
+    return (sqrt(a) * (46.68634 + 5.82514 * xx) * sin(x)
+        - x * (17.83632 + 2.02948 * xx) * cos(x)
+        ) / ((57.70003 + 17.49211 * xx) * pow(a, 3. / 4.));
+}
+
+__device__ float AiryDisk(float sinTheta, float k) {
+    float radius = 5.0;
+    float airy = pow((2.0 * BesselJ(k * radius * sinTheta)) / (k * radius * sinTheta), 2.0f);
+    if (isinf(airy)) {
+        airy = 0.0;
+    }
+    if (isnan(airy)) {
+        airy = 0.0;
+    }
+    return airy;
+}
+
 __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, DiffractionSettings settings) {
     int globalThreadIndex = blockIdx.x * blockDim.x + threadIdx.x;
     int x = globalThreadIndex % settings.size;
@@ -89,12 +142,12 @@ __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, Diffractio
     //ensure scaleWeight + radiusWeight + distanceWeight == 1.0.
     float average = dot(
         vec3(scale, radius, dist),
-        vec3(0.1f, 0.3f, 0.6f)
+        vec3(0.0f, 0.4f, 0.6f)
     );
     float deviation = sqrt(
         dot(
             pow(vec3(scale, radius, dist) - average, vec3(2.0f)),
-            vec3(0.1f, 0.3f, 0.6f)
+            vec3(0.0f, 0.4f, 0.6f)
         )
     );
 
@@ -106,11 +159,15 @@ __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, Diffractio
     float cosAngle = cos(angle);
     float blades = float(settings.bladeCount);
 
-    int steps = int(scale * pow(radius, 2.0f) * pow(dist, 2.0f) * settings.quality);
+    int steps = int(deviation * average * 20.0f * settings.quality);
+
     thrust::complex<float> integral = thrust::complex<float>(0.0f, 0.0f);
     for (int i = 0; i < steps; ++i) {
         vec2 uv = scale * ((vec2(x, y) / vec2(settings.size, settings.size)) - 0.5f);
         vec2 rngUV = BokehShape(rng, blades, radius);
+        if (blades > 30) {
+            rngUV = SampleCircle(rng, radius);
+        }
 
         float r = length(vec3(uv - rngUV, dist));
         float rk = r * k;
@@ -134,7 +191,7 @@ __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, Diffractio
     }
     integral /= steps;
 
-    integral *= thrust::complex<float>(1.0f, -1.0f / wavelength);
+    integral *= thrust::complex<float>(1.0f, 1.0f / wavelength);
 
     diff[x + y * settings.size] = absSquared(integral);
 }
