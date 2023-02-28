@@ -124,6 +124,17 @@ __device__ float AiryDisk(float sinTheta, float k) {
     return airy;
 }
 
+__device__ float Plancks(float t, float lambda) {
+    const float h = 6.62607015e-16;
+    const float c = 2.9e17;
+    const float k = 1.38e-5;
+
+    float p1 = 2.0 * h * pow(c, 2.0) * pow(lambda, -5.0);
+    float p2 = exp((h * c) / (lambda * k * t)) - 1.0;
+
+    return p1 / p2;
+}
+
 __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, DiffractionSettings settings) {
     int globalThreadIndex = blockIdx.x * blockDim.x + threadIdx.x;
     int x = globalThreadIndex % settings.size;
@@ -187,11 +198,13 @@ __global__ void DiffractionIntegral(float* diff, int wavelengthIndex, Diffractio
             term = thrust::complex<float>(0.0f, 1.0f);
         }
 
-        integral += term;
+        thrust::complex<float> lensPhaseDelay = 1.0f;
+
+        integral += term * lensPhaseDelay;
     }
     integral /= steps;
 
     integral *= thrust::complex<float>(1.0f, 1.0f / wavelength);
 
-    diff[x + y * settings.size] = absSquared(integral);
+    diff[x + y * settings.size] = absSquared(integral) * Plancks(6504.0f, wavelength * 1e3f);
 }

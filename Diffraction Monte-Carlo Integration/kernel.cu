@@ -483,17 +483,6 @@ glm::vec3 SpectrumToXYZ(float spectrum, float w) {
     }
 }
 
-float Plancks(float t, float lambda) {
-    const float h = 6.62607015e-16;
-    const float c = 2.9e17;
-    const float k = 1.38e-5;
-
-    float p1 = 2.0 * h * pow(c, 2.0) * pow(lambda, -5.0);
-    float p2 = exp((h * c) / (lambda * k * t)) - 1.0;
-
-    return p1 / p2;
-}
-
 float** diffractionArrays;
 float** hostCopyArrays;
 cudaStream_t* stream;
