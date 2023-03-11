@@ -15,6 +15,7 @@ public class SpectralImageData
     public readonly float[] Wavelength;
     public readonly float[] Irradiance;
     public readonly Vector3[,] FinalColor;
+    public readonly Vector3[,] D65;
 
 
     public SpectralImageData(in int size, in int wavelengthCount)
@@ -27,6 +28,7 @@ public class SpectralImageData
         Wavelength = new float[wavelengthCount];
         Irradiance = new float[size * size * wavelengthCount];
         FinalColor = new Vector3[size, size];
+        D65 = new Vector3[size, size];
 
         _finalColorLock = new object();
     }
@@ -38,6 +40,10 @@ public class SpectralImageData
         lock (_finalColorLock) {
             for (var y = 0; y < Size; y++) {
                 for (var x = 0; x < Size; x++) {
+                    var d65 = ImageBuilder.Plancks(6504f, Wavelength[wavelengthIndex]);
+                    Spectral.SpectrumToRGB(d65, Wavelength[wavelengthIndex], out var pixelD65);
+                    D65[x, y] += pixelD65 / WavelengthCount;
+
                     var irradianceIndex = x + y * Size + wavelengthOffset;
                     Spectral.SpectrumToRGB(in Irradiance[irradianceIndex], in Wavelength[wavelengthIndex], out var pixelRGB);
                     FinalColor[x, y] += pixelRGB / WavelengthCount;
@@ -52,9 +58,9 @@ public class SpectralImageData
         image.Mutate(context => {
             context.ProcessPixelRowsAsVector4((row, region) => {
                 for (var x = 0; x < Size; x++) {
-                    row[x].X = FinalColor[x, region.Y].X * exposure;
-                    row[x].Y = FinalColor[x, region.Y].Y * exposure;
-                    row[x].Z = FinalColor[x, region.Y].Z * exposure;
+                    row[x].X = (FinalColor[x, region.Y].X / D65[x, region.Y].X) * exposure;
+                    row[x].Y = (FinalColor[x, region.Y].Y / D65[x, region.Y].Y) * exposure;
+                    row[x].Z = (FinalColor[x, region.Y].Z / D65[x, region.Y].Z) * exposure;
                 }
             });
         });
