@@ -56,7 +56,7 @@
                                     <StackPanel Orientation="Vertical" Margin="24,8">
                                         <TextBlock Margin="1" Foreground="{DynamicResource MahApps.Brushes.Gray5}"
                                                    Text="{Binding Model.QualityLabel, Mode=OneWay}"/>
-                                        <Slider Minimum="0.1" Maximum="10.0"
+                                        <Slider Minimum="0.1" Maximum="20.0"
                                                 ToolTip="Multiplies step count by specified value."
                                                 Style="{DynamicResource MahApps.Styles.Slider.Flat}"
                                                 Value="{Binding Model.Quality, Mode=TwoWay}"/>

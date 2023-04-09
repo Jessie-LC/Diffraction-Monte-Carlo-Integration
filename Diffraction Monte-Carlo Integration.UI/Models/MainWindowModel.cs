@@ -121,7 +121,7 @@ public class MainWindowModel : INotifyPropertyChanged
         get => _quality;
         set {
             if (value < 0.1f) throw new ApplicationException("Quality must be greater than or equal to 0.1!");
-            if (value > 10f) throw new ApplicationException("Quality must be less than or equal to 10!");
+            if (value > 20f) throw new ApplicationException("Quality must be less than or equal to 10!");
 
             _quality = value;
             OnPropertyChanged();

@@ -538,7 +538,7 @@ int ComputeDiffractionImage(int threadIDX, int streamCount, int wavelengthCount,
 
     size_t diffraction_size_bytes = (size_t)(settings.size * settings.size) * sizeof(float);
 
-    int threadsPerBlock = settings.size / 2;
+    int threadsPerBlock = settings.size;
     int numberOfBlocks = settings.size * settings.size / threadsPerBlock;
 
     DiffractionIntegral << <numberOfBlocks, threadsPerBlock, 0, stream[threadIDX % streamCount] >> > (diffractionArrays[threadIDX], wavelengthIndex, settings);
@@ -587,23 +587,23 @@ extern "C" {
 
 int main() {
     const int wavelengthCount = 30;
-    int size = 256;
+    int size = 512;
     bool squareScale = false;
     float radius = 2.0f;
-    float quality = 10.0f;
-    float scale = 10.0f;
+    float quality = 20.0f;
+    float scale = 600.0f;
     float dist = 10.0f;
 
     float* Irradiance = (float*)malloc(int(size * size * wavelengthCount) * sizeof(float));
     float* Wavelength = (float*)malloc(int(wavelengthCount) * sizeof(float));
 
-    InitializeMemory(12, size);
+    InitializeMemory(6, size);
     //*
-    std::thread t1[12];
-    for (int i = 0; i < 12; ++i) {
+    std::thread t1[6];
+    for (int i = 0; i < 6; ++i) {
         t1[i] = std::thread(ComputeDiffractionImageAtomic, i, wavelengthCount, squareScale, size, 3, quality, radius, scale, dist, Irradiance, Wavelength);
     }
-    for (int i = 0; i < 12; ++i) {
+    for (int i = 0; i < 6; ++i) {
         t1[i].join();
     }
     //*/
@@ -619,7 +619,9 @@ int main() {
     }
     //*/
 
-    FreeMemory(12);
+    FreeMemory(6);
+
+    std::cout << "Finished diffraction calculations" << std::endl;
 
     vec3* Image = (vec3*)malloc(int(size * size) * sizeof(vec3));
 
@@ -650,7 +652,7 @@ int main() {
     std::ofstream scatteringLut("Diffraction.dat", std::ios::binary);
     scatteringLut.write(reinterpret_cast<char*>(Image), sizeof(vec3) * size * size);
     scatteringLut.close();
-    std::cout << "Finished generating diffraction!" << std::endl;
+    std::cout << "Finished generating diffraction image!" << std::endl;
 
     return 0;
 }
